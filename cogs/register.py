@@ -4,6 +4,7 @@ from discord import app_commands
 from discord.ext import commands
 
 import datetime
+import time
 from json import loads
 from pathlib import Path
 
@@ -16,6 +17,8 @@ DATABASE_TOKEN = data['DATABASE_TOKEN']
 cluster = MongoClient(DATABASE_TOKEN)
 general = cluster['alphaworks']['general']
 inventory = cluster['alphaworks']['inventory']
+skills = cluster['alphaworks']['skills']
+collections = cluster['alphaworks']['collections']
 
 class register(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -25,7 +28,7 @@ class register(commands.Cog):
         name = "register",
         description = "Setup your profile!")
 
-    async def play(self,interaction: discord.Interaction):
+    async def register(self,interaction: discord.Interaction):
         if general.find_one({'id' : interaction.user.id}) is None:
         
             embed = discord.Embed(title = f"Welcome to Alphaworks, {interaction.user.display_name}!", 
@@ -33,15 +36,37 @@ class register(commands.Cog):
                                 color = discord.Color.random(), 
                                 timestamp = datetime.datetime.now())
 
-            embed.set_author(name = interaction.user)
-
             button = Button(label = "I understand.", style = discord.ButtonStyle.gray, emoji = "👌")
             async def button_callback(interaction):
                 button.style = discord.ButtonStyle.green
 
                 #Setup the profile and inventory on MongoDB
                 inventory.insert_one({'id' : interaction.user.id})
-                general.insert_one({'id' : interaction.user.id, 'name' : interaction.user.display_name})
+
+                generalData = {
+                    'id' : interaction.user.id,
+                    'name' : interaction.user.display_name,
+                    'creation' : time.time(),
+                    'pickaxeTier' : 'h', 'axeTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
+                }
+
+                general.insert_one(generalData)
+
+                skillData = {
+                    'id' : interaction.user.id,
+                    'foragingLevel' : 0,
+                    'foragingXP' : 0,
+                    'foragingBonus' : 0
+                }
+                
+                skills.insert_one(skillData)
+
+                collectionsData = {
+                    'id' : interaction.user.id,
+                    'wood' : 0, 'woodLevel' : 0
+                }
+
+                collections.insert_one(collectionsData)
 
                 await interaction.response.edit_message(content="Profile Setup, Happy Playing!", embed = None, view = None)
 

@@ -1,11 +1,17 @@
 {
-    "oak" : {
-        "xp" : 2,
-        "weight" : 10
-    },
+    "oak" : [
+        {
+            "xp" : 2,
+            "weight" : 10,
+            "tiers" : "w"
+        }
+    ],
 
-    "birch" : {
-        "xp" : 3,
-        "weight" : 8
-    }
+    "birch" : [
+        {
+            "xp" : 3,
+            "weight" : 8,
+            "tiers" : "w"
+        }
+    ]
 }
