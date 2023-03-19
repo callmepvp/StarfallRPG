@@ -1,5 +1,5 @@
 {
-    "oak" : [
+    "stone" : [
         {
             "xp" : 1,
             "weight" : 10,
@@ -7,27 +7,27 @@
         }
     ],
 
-    "birch" : [
+    "coal" : [
         {
-            "xp" : 3,
+            "xp" : 1,
             "weight" : 8,
             "tiers" : "wc"
         }
     ],
 
-    "spruce" : [
+    "copper" : [
         {
-            "xp" : 3,
+            "xp" : 2,
             "weight" : 7,
             "tiers" : "wc"
         }
     ],
 
-    "acacia" : [
+    "iron" : [
         {
-            "xp" : 5,
-            "weight" : 3,
-            "tiers" : "wc"
+            "xp" : 4,
+            "weight" : 4,
+            "tiers" : "c"
         }
     ]
 }

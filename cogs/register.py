@@ -47,23 +47,26 @@ class register(commands.Cog):
                     'id' : interaction.user.id,
                     'name' : interaction.user.display_name,
                     'creation' : time.time(),
-                    'pickaxeTier' : 'h', 'axeTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
+                    'stamina' : 200,
+                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
                 }
 
                 general.insert_one(generalData)
 
                 skillData = {
                     'id' : interaction.user.id,
-                    'foragingLevel' : 0,
-                    'foragingXP' : 0,
-                    'foragingBonus' : 0
+                    'foragingLevel' : 0, 'foragingXP' : 0, 'foragingBonus' : 0,
+                    'miningLevel' : 0, 'miningXP' : 0, 'miningBonus' : 0,
+                    'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0
                 }
                 
                 skills.insert_one(skillData)
 
                 collectionsData = {
                     'id' : interaction.user.id,
-                    'wood' : 0, 'woodLevel' : 0
+                    'wood' : 0, 'woodLevel' : 0,
+                    'ore' : 0, 'oreLevel' : 0,
+                    'crop' : 0, 'cropLevel' : 0
                 }
 
                 collections.insert_one(collectionsData)

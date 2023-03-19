@@ -1,33 +1,33 @@
 {
-    "oak" : [
+    "wheat" : [
         {
             "xp" : 1,
             "weight" : 10,
-            "tiers" : "hwc"
+            "tiers" : "h"
         }
     ],
 
-    "birch" : [
-        {
-            "xp" : 3,
-            "weight" : 8,
-            "tiers" : "wc"
-        }
-    ],
-
-    "spruce" : [
+    "carrot" : [
         {
             "xp" : 3,
             "weight" : 7,
-            "tiers" : "wc"
+            "tiers" : "h"
         }
     ],
 
-    "acacia" : [
+    "potato" : [
+        {
+            "xp" : 3,
+            "weight" : 7,
+            "tiers" : "h"
+        }
+    ],
+
+    "pumpkin" : [
         {
             "xp" : 5,
-            "weight" : 3,
-            "tiers" : "wc"
+            "weight" : 2,
+            "tiers" : "h"
         }
     ]
 }
