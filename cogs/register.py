@@ -19,6 +19,7 @@ general = cluster['alphaworks']['general']
 inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
+recipes = cluster['alphaworks']['recipes']
 
 class register(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -70,6 +71,13 @@ class register(commands.Cog):
                 }
 
                 collections.insert_one(collectionsData)
+
+                recipeData = {
+                    'id' : interaction.user.id,
+                    'toolrod' : True
+                }
+
+                recipes.insert_one(recipeData)
 
                 await interaction.response.edit_message(content="Profile Setup, Happy Playing!", embed = None, view = None)
 

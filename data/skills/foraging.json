@@ -3,7 +3,7 @@
         {
             "xp" : 1,
             "weight" : 10,
-            "tiers" : "hwc"
+            "tiers" : "hsc"
         }
     ],
 
@@ -11,7 +11,7 @@
         {
             "xp" : 3,
             "weight" : 8,
-            "tiers" : "wc"
+            "tiers" : "sc"
         }
     ],
 
@@ -19,7 +19,7 @@
         {
             "xp" : 3,
             "weight" : 7,
-            "tiers" : "wc"
+            "tiers" : "sc"
         }
     ],
 
@@ -27,7 +27,7 @@
         {
             "xp" : 5,
             "weight" : 3,
-            "tiers" : "wc"
+            "tiers" : "sc"
         }
     ]
 }
