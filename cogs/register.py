@@ -44,6 +44,7 @@ class register(commands.Cog):
                 #Setup the profile and inventory on MongoDB
                 inventory.insert_one({'id' : interaction.user.id})
 
+                #Holds the data for all general stats on setup
                 generalData = {
                     'id' : interaction.user.id,
                     'name' : interaction.user.display_name,
@@ -54,15 +55,18 @@ class register(commands.Cog):
 
                 general.insert_one(generalData)
 
+                #Holds the level, xp and bonus data for every skill => level and xp could be removed in the future & replaced with a total xp stat, which would calculate level on each command
                 skillData = {
                     'id' : interaction.user.id,
                     'foragingLevel' : 0, 'foragingXP' : 0, 'foragingBonus' : 0,
                     'miningLevel' : 0, 'miningXP' : 0, 'miningBonus' : 0,
-                    'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0
+                    'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0,
+                    'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0
                 }
                 
                 skills.insert_one(skillData)
 
+                #Holds the data for the main collections
                 collectionsData = {
                     'id' : interaction.user.id,
                     'wood' : 0, 'woodLevel' : 0,
@@ -72,6 +76,7 @@ class register(commands.Cog):
 
                 collections.insert_one(collectionsData)
 
+                #Holds the data for all recipes that are given on setup, recipe data is saved as booleans
                 recipeData = {
                     'id' : interaction.user.id,
                     'toolrod' : True

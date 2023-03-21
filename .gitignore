@@ -7,3 +7,4 @@ cogs/skills/__pycache__/foraging.cpython-311.pyc
 cogs/skills/__pycache__/mining.cpython-311.pyc
 cogs/skills/__pycache__/farming.cpython-311.pyc
 cogs/skills/__pycache__/crafting.cpython-311.pyc
+cogs/__pycache__/debug.cpython-311.pyc

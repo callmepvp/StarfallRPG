@@ -1,0 +1,73 @@
+import discord
+import typing
+from discord.ui import Button, View
+from discord import app_commands
+from discord.ext import commands
+
+import random
+import string
+import io
+from json import loads
+from pathlib import Path
+
+from pymongo import MongoClient
+
+#Retrieve tokens & Initialize database
+data = loads(Path("data/config.json").read_text())
+craftingData = loads(Path("data/recipes/craftingRecipes.json").read_text())
+DATABASE_TOKEN = data['DATABASE_TOKEN']
+OWNER_ID = data['OWNER_ID']
+
+cluster = MongoClient(DATABASE_TOKEN)
+general = cluster['alphaworks']['general']
+inventory = cluster['alphaworks']['inventory']
+skills = cluster['alphaworks']['skills']
+collections = cluster['alphaworks']['collections']
+recipes = cluster['alphaworks']['recipes']
+
+class debug(commands.Cog):
+    def __init__(self, bot: commands.Bot) -> None:
+        self.bot = bot
+
+    @app_commands.command(
+        name = "debug",
+        description = "Doesn't work, does it?")
+
+    async def debug(self,interaction: discord.Interaction, option: typing.Literal['Profile Delete'], argument: str):
+        if general.find_one({'id' : interaction.user.id}) is not None:
+            if interaction.user.id == OWNER_ID:
+                
+                if option == 'Profile Delete':
+                    #Delete any profile from the database
+                    try:
+                        if general.find_one({'id' : int(argument)}) is not None:
+                            name = general.find_one({'id' : int(argument)})['name']
+                            
+                            savedData = "" #Save all data as a string
+                            directories = [general, skills, collections, recipes, inventory]
+                            #Has to look through: general, skills, collections, recipes, inventory
+                            for dir in directories: #Add all data from each document to a string and delete the document
+                                for key, value in dir.find_one({'id' : int(argument)}).items():
+                                    if key != '_id':
+                                        if key != 'id':
+                                            savedData = savedData + str(key) + " -> " + str(value) + "\n"
+                                            dir.delete_one({'id' : int(argument)})
+                            
+                            #Construct the .txt file to send
+                            fileData = discord.File(io.BytesIO(savedData.encode()), filename=f"data_{int(argument)}.txt")
+                            channel = self.bot.get_channel(1087847199221747804) #Hardcoded channel ID for the debug log (Change if necessary); will later be an option
+                            await channel.send(f"**{interaction.user.display_name}** deleted the profile of **{name}**! \nDeleted ID: **{int(argument)}** \nStaff ID: **{interaction.user.id}**", file=fileData)
+                            await interaction.response.send_message(ephemeral=True, content=f"Successfully deleted profile with ID **{int(argument)}** with the name **{name}**! Bye!")
+                        else:
+                            await interaction.response.send_message(ephemeral=True, content="ID was not found on the database!")
+                    except:
+                        await interaction.response.send_message(ephemeral=True, content="Couldn't finish through with this process. Try again later.")
+            else:
+                await interaction.response.send_message(ephemeral=True, content="Not authorized to use this! Sorry.")
+        else:
+            await interaction.response.send_message(ephemeral=True, content="Please setup your account with `/register` before using this command.")
+
+async def setup(bot: commands.Bot) -> None:
+    await bot.add_cog(
+        debug(bot),
+        guilds = [discord.Object(id = 1047945458665914388)])
