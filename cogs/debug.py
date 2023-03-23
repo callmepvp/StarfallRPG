@@ -33,35 +33,35 @@ class debug(commands.Cog):
         name = "debug",
         description = "Doesn't work, does it?")
 
-    async def debug(self,interaction: discord.Interaction, option: typing.Literal['Profile Delete'], argument: str):
+    async def debug(self,interaction: discord.Interaction, option: typing.Literal['Profile Delete'], argument: str, argument2: str = None):
         if general.find_one({'id' : interaction.user.id}) is not None:
             if interaction.user.id == OWNER_ID:
                 
                 if option == 'Profile Delete':
                     #Delete any profile from the database
-                    try:
-                        if general.find_one({'id' : int(argument)}) is not None:
-                            name = general.find_one({'id' : int(argument)})['name']
-                            
-                            savedData = "" #Save all data as a string
-                            directories = [general, skills, collections, recipes, inventory]
-                            #Has to look through: general, skills, collections, recipes, inventory
-                            for dir in directories: #Add all data from each document to a string and delete the document
-                                for key, value in dir.find_one({'id' : int(argument)}).items():
+                    if general.find_one({'id' : int(argument)}) is not None:
+                        await interaction.response.defer() #Acknowledged the interaction
+                        name = general.find_one({'id' : int(argument)})['name']
+                        
+                        savedData = "" #Save all data as a string
+                        directories = [general, skills, collections, recipes, inventory]
+                        #Has to look through: general, skills, collections, recipes
+                        for directory in directories: #Add all data from each document to a string and delete the document
+                            for key, value in directory.find_one({'id' : int(argument)}).items():
+                                if int(len(directory.find_one({'id' : int(argument)}).items())) > 2:
                                     if key != '_id':
                                         if key != 'id':
                                             savedData = savedData + str(key) + " -> " + str(value) + "\n"
-                                            dir.delete_one({'id' : int(argument)})
                             
-                            #Construct the .txt file to send
-                            fileData = discord.File(io.BytesIO(savedData.encode()), filename=f"data_{int(argument)}.txt")
-                            channel = self.bot.get_channel(1087847199221747804) #Hardcoded channel ID for the debug log (Change if necessary); will later be an option
-                            await channel.send(f"**{interaction.user.display_name}** deleted the profile of **{name}**! \nDeleted ID: **{int(argument)}** \nStaff ID: **{interaction.user.id}**", file=fileData)
-                            await interaction.response.send_message(ephemeral=True, content=f"Successfully deleted profile with ID **{int(argument)}** with the name **{name}**! Bye!")
-                        else:
-                            await interaction.response.send_message(ephemeral=True, content="ID was not found on the database!")
-                    except:
-                        await interaction.response.send_message(ephemeral=True, content="Couldn't finish through with this process. Try again later.")
+                            directory.delete_one({'id' : int(argument)})
+                        
+                        #Construct the .txt file to send
+                        fileData = discord.File(io.BytesIO(savedData.encode()), filename=f"data_{int(argument)}.txt")
+                        channel = self.bot.get_channel(1087847199221747804) #Hardcoded channel ID for the debug log (Change if necessary); will later be an option
+                        await channel.send(f"**{interaction.user.display_name}** deleted the profile of **{name}**! \nDeleted ID: **{int(argument)}** \nStaff ID: **{interaction.user.id}** \nReason: **{str(argument2)}**", file=fileData)
+                        await interaction.followup.send(ephemeral=True, content=f"Successfully deleted profile with ID **{int(argument)}** with the name **{name}**! Bye!")
+                    else:
+                        await interaction.response.send_message(ephemeral=True, content="ID was not found on the database!")
             else:
                 await interaction.response.send_message(ephemeral=True, content="Not authorized to use this! Sorry.")
         else:

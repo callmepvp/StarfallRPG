@@ -50,7 +50,7 @@ class register(commands.Cog):
                     'name' : interaction.user.display_name,
                     'creation' : time.time(),
                     'stamina' : 200,
-                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
+                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
                 }
 
                 general.insert_one(generalData)
@@ -61,17 +61,19 @@ class register(commands.Cog):
                     'foragingLevel' : 0, 'foragingXP' : 0, 'foragingBonus' : 0,
                     'miningLevel' : 0, 'miningXP' : 0, 'miningBonus' : 0,
                     'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0,
-                    'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0
+                    'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0,
+                    'scavengingLevel' : 0, 'scavengingXP' : 0, 'scavengingBonus' : 0
                 }
                 
                 skills.insert_one(skillData)
 
-                #Holds the data for the main collections
+                #Holds the data for the main collections ; These will most likely get a significant overhaul in the future
                 collectionsData = {
                     'id' : interaction.user.id,
                     'wood' : 0, 'woodLevel' : 0,
                     'ore' : 0, 'oreLevel' : 0,
-                    'crop' : 0, 'cropLevel' : 0
+                    'crop' : 0, 'cropLevel' : 0,
+                    'herb' : 0, 'herbLevel' : 0
                 }
 
                 collections.insert_one(collectionsData)

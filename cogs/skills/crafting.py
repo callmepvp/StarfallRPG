@@ -98,6 +98,8 @@ class crafting(commands.Cog):
                         else:
                             skills.update_one({'id' : interaction.user.id}, {"$set":{'craftingXP' : existingXP + xp}})
                             message.append('\n' f':star: You gained **{xp} Crafting** XP!')
+
+                        await interaction.response.send_message(''.join(message))
             else:
                 await interaction.response.send_message(ephemeral=True, content="You don't have enough stamina!")
         else:
