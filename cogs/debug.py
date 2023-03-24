@@ -4,8 +4,6 @@ from discord.ui import Button, View
 from discord import app_commands
 from discord.ext import commands
 
-import random
-import string
 import io
 from json import loads
 from pathlib import Path
