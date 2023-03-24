@@ -5,3 +5,16 @@ Tool Rarities -> Hand h; Stone s; Copper c; Iron i
 
 Collections -> Wood, Ore, Crop
 (Every collection unlocks useful recipes to advance in the adventure)
+
+
+def collectionupdate(level):
+
+    rewards = {
+        1: "level 1",
+        2: "level 2"
+    }
+
+    reward = rewards.get(level, "invalid level")
+    return reward
+    
+

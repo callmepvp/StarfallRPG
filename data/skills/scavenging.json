@@ -5,5 +5,13 @@
             "weight" : 10,
             "tiers" : "hsc"
         }
+    ],
+
+    "needlegrass" : [
+        {
+            "xp" : 2,
+            "weight" : 7,
+            "tiers" : "hsc"
+        }
     ]
 }

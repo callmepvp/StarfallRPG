@@ -13,6 +13,7 @@ from pymongo import MongoClient
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
 foragingData =loads(Path("data/skills/foraging.json").read_text())
+collectionData = loads(Path("data/collections/foraging.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
@@ -20,6 +21,7 @@ general = cluster['alphaworks']['general']
 inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
+recipes = cluster['alphaworks']['recipes']
 
 #Hand > Wooden Axe > Copper Axe > Iron Axe > Steel Axe > Gold Axe
 
@@ -89,6 +91,10 @@ class foraging(commands.Cog):
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'wood' : currentWood + amount}})
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'woodLevel' : currentWoodLevel + 1}})
                         message.append('\n' f'**[COLLECTION]** **Wood** Collection Level **{currentWoodLevel}** ⇒ **{currentWoodLevel + 1}**')
+                        
+                        #Give collection rewards
+                        for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['woodLevel']}"]:
+                            recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
                     else:
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'wood' : currentWood + amount}})
 
