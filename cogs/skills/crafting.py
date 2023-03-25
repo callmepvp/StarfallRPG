@@ -21,10 +21,19 @@ inventory = cluster['alphaworks']['inventory']
 recipes = cluster['alphaworks']['recipes']
 skills = cluster['alphaworks']['skills']
 
+#Directory Grabbing Function (For Essences)
+def getDirectory(inputRecipe):
+    
+    #Check, whether the recipe item is an essence (Special case -> Essences are stored in general)
+    if inputRecipe != "miningEssence" and "farmingEssence" and "scavengingEssence" and "foragingEssence":
+        return inventory
+    else:
+        return general
+
 class crafting(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-    
+        
     #The actual crafting logic
     async def craft(self, interaction: discord.Interaction, item: str, amount: int = 1, selectedOption = False):
         if general.find_one({'id' : interaction.user.id})['stamina'] != 0: #Stamina Check
@@ -45,16 +54,22 @@ class crafting(commands.Cog):
                 #Check resources
                 checkedRes = 0
                 for i in range(int(len(recipe)/2)):
-                    dir = inventory #Directory variable (Technically deprecated, but can't be bothered to change)
+ 
+                    dir = getDirectory(recipe[str(i)])
 
-                    if dir.find_one({'id' : interaction.user.id, recipe[str(i)] : {'$exists': True}}):
-                        if dir.find_one({'id' : interaction.user.id})[recipe[str(i)]] >= amount * int(recipe["r" + str(i)]):
+                    #Check the item and quantities
+                    if dir.find_one({'id' : interaction.user.id, recipe[str(i)] : {'$exists': True}}): #Check if the item exists
+                        if dir.find_one({'id' : interaction.user.id})[recipe[str(i)]] >= amount * int(recipe["r" + str(i)]): #Check if there's enough of the item
                             checkedRes += 1
-
+                
+                        #All resources exist in enough quantities
                         if checkedRes == int(len(recipe)/2):
                             craftSuccess = True
                             for j in range(checkedRes):
+                                
+                                dir = getDirectory(recipe[str(j)])
 
+                                #Remove materials
                                 if dir.find_one({'id' : interaction.user.id})[recipe[str(j)]] - amount * int(recipe["r" + str(j)]) != 0:
                                     dir.update_one({'id' : interaction.user.id}, {"$set":{recipe[str(j)] : dir.find_one({'id' : interaction.user.id})[recipe[str(j)]] - amount * int(recipe["r" + str(j)])}})
                                 else:

@@ -3,6 +3,7 @@ from discord.ui import Button, View
 from discord import app_commands
 from discord.ext import commands
 
+import math
 import random
 import string
 from json import loads
@@ -13,6 +14,7 @@ from pymongo import MongoClient
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
 farmingData = loads(Path("data/skills/farming.json").read_text())
+collectionData = loads(Path("data/collections/crop.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
@@ -20,6 +22,7 @@ general = cluster['alphaworks']['general']
 inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
+recipes = cluster['alphaworks']['recipes']
 
 class farming(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -59,13 +62,19 @@ class farming(commands.Cog):
 
                     message.append(f":seedling: You **Farmed**! You got **{amount}** x **{string.capwords(crop)}**!")
 
-                    #Give skill XP
                     xp = farmingData[crop][0]['xp'] * amount
                     existingXP = skills.find_one({'id' : interaction.user.id})['farmingXP']
                     existingLevel = skills.find_one({'id' : interaction.user.id})['farmingLevel']
                     existingBonus = skills.find_one({'id' : interaction.user.id})['farmingBonus']
+                    existingEssence = general.find_one({'id' : interaction.user.id})['farmingEssence']
                     bonusAmount = 4 #Increase this skills bonus by this amount each level up
-                    
+
+                    #Give essence
+                    essenceFormula = round((xp * 0.35), 2)
+                    general.update_one({'id' : interaction.user.id}, {"$set":{'farmingEssence' : existingEssence + essenceFormula}})
+                    message.append(f"\n :sparkles: You gained **{essenceFormula} Farming Essence**!")
+
+                    #Give skill XP
                     if existingXP + xp >= (50*existingLevel+10):
                         leftoverXP = (existingXP + xp) - (50*existingLevel+10)
                         if leftoverXP == 0:
@@ -87,6 +96,10 @@ class farming(commands.Cog):
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'crop' : currentCrop + amount}})
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'cropLevel' : currentCropLevel + 1}})
                         message.append('\n' f'**[COLLECTION]** **Crop** Collection Level **{currentCropLevel}** ⇒ **{currentCropLevel + 1}**')
+                    
+                        #Give collection rewards
+                        for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['cropLevel']}"]:
+                            recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
                     else:
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'crop' : currentCrop + amount}})
 

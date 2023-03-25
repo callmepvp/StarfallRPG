@@ -50,7 +50,8 @@ class register(commands.Cog):
                     'name' : interaction.user.display_name,
                     'creation' : time.time(),
                     'stamina' : 200,
-                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h' #Tool Tiers > Necessary for limiting certain drops to certain tools
+                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h', #Tool Tiers > Necessary for limiting certain drops to certain tools
+                    'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0 #Skill Essences
                 }
 
                 general.insert_one(generalData)

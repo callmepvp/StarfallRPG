@@ -13,7 +13,7 @@ from pymongo import MongoClient
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
 foragingData =loads(Path("data/skills/foraging.json").read_text())
-collectionData = loads(Path("data/collections/foraging.json").read_text())
+collectionData = loads(Path("data/collections/wood.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
@@ -68,7 +68,13 @@ class foraging(commands.Cog):
                     existingXP = skills.find_one({'id' : interaction.user.id})['foragingXP']
                     existingLevel = skills.find_one({'id' : interaction.user.id})['foragingLevel']
                     existingBonus = skills.find_one({'id' : interaction.user.id})['foragingBonus']
+                    existingEssence = general.find_one({'id' : interaction.user.id})['foragingEssence']
                     bonusAmount = 1 #Increase this skills bonus by this amount each level up
+
+                    #Give essence
+                    essenceFormula = round((xp * 0.35), 2)
+                    general.update_one({'id' : interaction.user.id}, {"$set":{'foragingEssence' : existingEssence + essenceFormula}})
+                    message.append(f"\n :sparkles: You gained **{essenceFormula} Foraging Essence**!")
                     
                     if existingXP + xp >= (50*existingLevel+10):
                         leftoverXP = (existingXP + xp) - (50*existingLevel+10)

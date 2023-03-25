@@ -6,15 +6,9 @@ Tool Rarities -> Hand h; Stone s; Copper c; Iron i
 Collections -> Wood, Ore, Crop
 (Every collection unlocks useful recipes to advance in the adventure)
 
+1 Skill XP = 0.3 Essence
 
-def collectionupdate(level):
 
-    rewards = {
-        1: "level 1",
-        2: "level 2"
-    }
-
-    reward = rewards.get(level, "invalid level")
-    return reward
-    
-
+1 * x = 0.3
+2 * x = 0.6
+x = 0.3

@@ -21,15 +21,103 @@
         }
     ],
 
+    "pickaxe mold": [
+        {
+            "0" : "stone",
+            "1" : "coal",
+            "2" : "miningEssence",
+
+            "r0" : "5",
+            "r1" : "3",
+            "r2" : "5"
+        }
+    ],
+
+    "axe mold": [
+        {
+            "0" : "stone",
+            "1" : "oak",
+            "2" : "foragingEssence",
+
+            "r0" : "5",
+            "r1" : "3",
+            "r2" : "5"
+        }
+    ],
+
+    "hoe mold": [
+        {
+            "0" : "stone",
+            "1" : "wheat",
+            "2" : "farmingEssence",
+
+            "r0" : "5",
+            "r1" : "3",
+            "r2" : "5"
+        }
+    ],
+
+    "glove cast": [
+        {
+            "0" : "stone",
+            "1" : "silverleaf",
+            "2" : "scavengingEssence",
+
+            "r0" : "5",
+            "r1" : "3",
+            "r2" : "5"
+        }
+    ],
+
+    "stone pickaxe": [
+        {
+            "0" : "toolrod",
+            "1" : "binding",
+            "2" : "stone",
+            "3" : "pickaxe mold",
+
+            "r0" : "3",
+            "r1" : "1",
+            "r2" : "2",
+            "r3" : "1"
+        }
+    ],
+
     "stone axe": [
         {
             "0" : "toolrod",
             "1" : "binding",
             "2" : "stone",
+            "3" : "axe mold",
+
+            "r0" : "2",
+            "r1" : "1",
+            "r2" : "3",
+            "r3" : "1"
+        }
+    ],
+
+    "stone hoe": [
+        {
+            "0" : "toolrod",
+            "1" : "binding",
+            "2" : "stone",
+            "3" : "hoe mold",
 
             "r0" : "3",
             "r1" : "1",
-            "r2" : "3"
+            "r2" : "1",
+            "r3" : "1"
+        }
+    ],
+
+    "stone gloves": [
+        {
+            "0" : "stone",
+            "1" : "glove cast",
+
+            "r0" : "3",
+            "r1" : "1"
         }
     ]
 }

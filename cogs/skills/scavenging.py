@@ -13,6 +13,7 @@ from pymongo import MongoClient
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
 scavengingData = loads(Path("data/skills/scavenging.json").read_text())
+collectionData = loads(Path("data/collections/herb.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
@@ -20,6 +21,7 @@ general = cluster['alphaworks']['general']
 inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
+recipes = cluster['alphaworks']['recipes']
 
 class scavenging(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -64,7 +66,13 @@ class scavenging(commands.Cog):
                     existingXP = skills.find_one({'id' : interaction.user.id})['scavengingXP']
                     existingLevel = skills.find_one({'id' : interaction.user.id})['scavengingLevel']
                     existingBonus = skills.find_one({'id' : interaction.user.id})['scavengingBonus']
+                    existingEssence = general.find_one({'id' : interaction.user.id})['scavengingEssence']
                     bonusAmount = 1 #Increase this skills bonus by this amount each level up
+
+                    #Give essence
+                    essenceFormula = round((xp * 0.35), 2)
+                    general.update_one({'id' : interaction.user.id}, {"$set":{'scavengingEssence' : existingEssence + essenceFormula}})
+                    message.append(f"\n :sparkles: You gained **{essenceFormula} Scavenging Essence**!")
                     
                     if existingXP + xp >= (50*existingLevel+10):
                         leftoverXP = (existingXP + xp) - (50*existingLevel+10)
@@ -87,6 +95,10 @@ class scavenging(commands.Cog):
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'herb' : currentHerb + amount}})
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'herbLevel' : currentHerbLevel + 1}})
                         message.append('\n' f'**[COLLECTION]** **Herb** Collection Level **{currentHerbLevel}** ⇒ **{currentHerbLevel + 1}**')
+                    
+                        #Give collection rewards
+                        for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['herbLevel']}"]:
+                            recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
                     else:
                         collections.update_one({'id' : interaction.user.id}, {"$set":{'herb' : currentHerb + amount}})
 
