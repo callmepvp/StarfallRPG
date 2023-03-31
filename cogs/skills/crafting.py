@@ -13,6 +13,7 @@ from pymongo import MongoClient
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
 craftingData = loads(Path("data/recipes/craftingRecipes.json").read_text())
+itemData = loads(Path("data/items.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
@@ -21,12 +22,31 @@ inventory = cluster['alphaworks']['inventory']
 recipes = cluster['alphaworks']['recipes']
 skills = cluster['alphaworks']['skills']
 
+possibleFish = []
+for item in itemData:
+    if itemData[item][0]['type'] == 'fish':
+        possibleFish.append(item)
+
+#Check the inventory for any fish
+for fish in possibleFish:
+    pass
+
+print(possibleFish)
+
 #Directory Grabbing Function (For Essences)
 def getDirectory(inputRecipe):
     
-    #Check, whether the recipe item is an essence (Special case -> Essences are stored in general)
+    #Check the recipe for special case items
+    """
+    Special case items Include:
+    Every Skill Essence -> <skill>Essence
+    anyFish -> Decorator for any allowed item of type "fish"
+    """
     if inputRecipe != "miningEssence" and "farmingEssence" and "scavengingEssence" and "foragingEssence":
         return inventory
+    elif inputRecipe == "anyFish":
+        for item in itemData:
+            print(item["type"])
     else:
         return general
 
@@ -101,7 +121,7 @@ class crafting(commands.Cog):
                     bonusAmount = 1 #Increase this skills bonus by this amount each level up
                     xp = 1 * amount
                     for w in range(int(len(recipe)/2)):
-                        xp = xp * int(recipe["r" + str(w)])
+                        xp = xp + int(recipe["r" + str(w)])
 
                     if existingXP + xp >= (50*existingLevel+10):
                         leftoverXP = (existingXP + xp) - (50*existingLevel+10)

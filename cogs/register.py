@@ -20,6 +20,7 @@ inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
 recipes = cluster['alphaworks']['recipes']
+areas = cluster['alphaworks']['areas']
 
 class register(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -50,11 +51,22 @@ class register(commands.Cog):
                     'name' : interaction.user.display_name,
                     'creation' : time.time(),
                     'stamina' : 200,
-                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h', #Tool Tiers > Necessary for limiting certain drops to certain tools
-                    'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0 #Skill Essences
+                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h', 'rodTier' : 'h', #Tool Tiers > Necessary for limiting certain drops to certain tools
+                    'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0, 'fishingEssence' : 0, #Skill Essences
+                    'treasureChance' : 1, 'trashChance' : 50 #Necessary fishing stats
                 }
 
                 general.insert_one(generalData)
+                
+                #Currently holds no use except for fishing (will be used later) (Might randomize starting location later)
+                areaData = {
+                    'id' : interaction.user.id,
+                    'currentSubarea' : 'sunken lagoon', #Default spawning locations for every new player
+                    'subareaType' : 'small', #Extra arguments for subareas, if needed
+                    'currentArea' : 'plains'
+                }
+
+                areas.insert_one(areaData)
 
                 #Holds the level, xp and bonus data for every skill => level and xp could be removed in the future & replaced with a total xp stat, which would calculate level on each command
                 skillData = {
@@ -63,7 +75,8 @@ class register(commands.Cog):
                     'miningLevel' : 0, 'miningXP' : 0, 'miningBonus' : 0,
                     'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0,
                     'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0,
-                    'scavengingLevel' : 0, 'scavengingXP' : 0, 'scavengingBonus' : 0
+                    'scavengingLevel' : 0, 'scavengingXP' : 0, 'scavengingBonus' : 0,
+                    'fishingLevel' : 0, 'fishingXP' : 0, 'fishingBonus' : 0
                 }
                 
                 skills.insert_one(skillData)
@@ -74,7 +87,8 @@ class register(commands.Cog):
                     'wood' : 0, 'woodLevel' : 0,
                     'ore' : 0, 'oreLevel' : 0,
                     'crop' : 0, 'cropLevel' : 0,
-                    'herb' : 0, 'herbLevel' : 0
+                    'herb' : 0, 'herbLevel' : 0,
+                    'fish' : 0, 'fishLevel' : 0
                 }
 
                 collections.insert_one(collectionsData)

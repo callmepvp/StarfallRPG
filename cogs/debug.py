@@ -22,6 +22,7 @@ inventory = cluster['alphaworks']['inventory']
 skills = cluster['alphaworks']['skills']
 collections = cluster['alphaworks']['collections']
 recipes = cluster['alphaworks']['recipes']
+areas = cluster['alphaworks']['areas']
 
 class debug(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -42,7 +43,9 @@ class debug(commands.Cog):
                         name = general.find_one({'id' : int(argument)})['name']
                         
                         savedData = "" #Save all data as a string
-                        directories = [general, skills, collections, recipes, inventory]
+
+                        #In the future add a check to see if the amount of collections on the database match the ones in the array
+                        directories = [general, skills, collections, recipes, inventory, areas]
                         #Has to look through: general, skills, collections, recipes
                         for directory in directories: #Add all data from each document to a string and delete the document
                             for key, value in directory.find_one({'id' : int(argument)}).items():

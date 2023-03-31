@@ -12,3 +12,10 @@ Collections -> Wood, Ore, Crop
 1 * x = 0.3
 2 * x = 0.6
 x = 0.3
+
+A complete item dictionary:
+Item type (mainly for crafting)
+Item rarity
+Item description
+Found in what areas
+Amount of base XP and for what skill

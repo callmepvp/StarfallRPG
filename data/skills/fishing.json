@@ -1,0 +1,55 @@
+{
+    "perch" : [
+        {
+            "xp" : 1,
+            "weight" : 10,
+            "tiers" : "h",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
+    "cod" : [
+        {
+            "xp" : 1,
+            "weight" : 10,
+            "tiers" : "h",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
+    "trout" : [
+        {
+            "xp" : 3,
+            "weight" : 8,
+            "tiers" : "h",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
+    "bluegill" : [
+        {
+            "xp" : 4,
+            "weight" : 7,
+            "tiers" : "h",
+            "subareas" : ["small"]
+        }
+    ],
+
+    "catfish" : [
+        {
+            "xp" : 6,
+            "weight" : 6,
+            "tiers" : "h",
+            "subareas" : ["large"]
+        }
+    ],
+
+    "carp" : [
+        {
+            "xp" : 6,
+            "weight" : 6,
+            "tiers" : "h",
+            "subareas" : ["large"]
+        }
+    ]
+}

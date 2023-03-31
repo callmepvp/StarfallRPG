@@ -1,0 +1,71 @@
+{
+    "wheat" : [
+        {
+            "type" : "farmable",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "perch" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "cod" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "trout" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "bluegill" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "catfish" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ],
+
+    "carp" : [
+        {
+            "type" : "fish",
+            "rarity" : "common",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Farming XP"
+        }
+    ]
+}
