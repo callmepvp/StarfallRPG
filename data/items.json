@@ -15,7 +15,7 @@
             "rarity" : "common",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "1 Fishing XP"
         }
     ],
 
@@ -25,7 +25,7 @@
             "rarity" : "common",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "1 Fishing XP"
         }
     ],
 
@@ -35,37 +35,37 @@
             "rarity" : "common",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "3 Fishing XP"
         }
     ],
 
     "bluegill" : [
         {
             "type" : "fish",
-            "rarity" : "common",
+            "rarity" : "uncommon",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "4 Fishing XP"
         }
     ],
 
     "catfish" : [
         {
             "type" : "fish",
-            "rarity" : "common",
+            "rarity" : "rare",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "6 Fishing XP"
         }
     ],
 
     "carp" : [
         {
             "type" : "fish",
-            "rarity" : "common",
+            "rarity" : "rare",
             "description" : "",
             "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
+            "skillXP" : "6 Fishing XP"
         }
     ]
 }

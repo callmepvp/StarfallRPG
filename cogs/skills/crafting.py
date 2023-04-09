@@ -22,19 +22,8 @@ inventory = cluster['alphaworks']['inventory']
 recipes = cluster['alphaworks']['recipes']
 skills = cluster['alphaworks']['skills']
 
-possibleFish = []
-for item in itemData:
-    if itemData[item][0]['type'] == 'fish':
-        possibleFish.append(item)
-
-#Check the inventory for any fish
-for fish in possibleFish:
-    pass
-
-print(possibleFish)
-
-#Directory Grabbing Function (For Essences)
-def getDirectory(inputRecipe):
+#Directory Grabbing Function
+def getDirectory(inputRecipe, userID, amount):
     
     #Check the recipe for special case items
     """
@@ -42,13 +31,29 @@ def getDirectory(inputRecipe):
     Every Skill Essence -> <skill>Essence
     anyFish -> Decorator for any allowed item of type "fish"
     """
-    if inputRecipe != "miningEssence" and "farmingEssence" and "scavengingEssence" and "foragingEssence":
-        return inventory
+    if inputRecipe in ["miningEssence", "farmingEssence", "scavengingEssence", "foragingEssence", "fishingEssence"]:
+        #Essences
+        return general, inputRecipe
+    
     elif inputRecipe == "anyFish":
+        #Fish
+        #Generate the list of possible fish
+        possibleFish = []
         for item in itemData:
-            print(item["type"])
+            if itemData[item][0]['type'] == 'fish':
+                possibleFish.append(item)
+
+        #Check the inventory for any fish
+        for fish in possibleFish:
+            if (inventory.find_one({'id' : userID, fish : {'$exists': True}}) is not None) and (inventory.find_one({'id' : userID})[fish] >= amount):
+                #There's enough fish in the inventory
+                return inventory, fish
+            else:
+                return inventory, "unableToCraft" #Return an exception reply
+            
     else:
-        return general
+        #Regular Resource
+        return inventory, inputRecipe
 
 class crafting(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -74,26 +79,28 @@ class crafting(commands.Cog):
                 #Check resources
                 checkedRes = 0
                 for i in range(int(len(recipe)/2)):
- 
-                    dir = getDirectory(recipe[str(i)])
+                    
+                    totalAmount = amount * int(recipe["r" + str(i)])
+                    dir, inputRecipe = getDirectory(recipe[str(i)], interaction.user.id, totalAmount)
 
                     #Check the item and quantities
-                    if dir.find_one({'id' : interaction.user.id, recipe[str(i)] : {'$exists': True}}): #Check if the item exists
-                        if dir.find_one({'id' : interaction.user.id})[recipe[str(i)]] >= amount * int(recipe["r" + str(i)]): #Check if there's enough of the item
+                    if dir.find_one({'id' : interaction.user.id, inputRecipe : {'$exists': True}}): #Check if the item exists
+                        if dir.find_one({'id' : interaction.user.id})[inputRecipe] >= amount * int(recipe["r" + str(i)]): #Check if there's enough of the item
                             checkedRes += 1
-                
+
                         #All resources exist in enough quantities
                         if checkedRes == int(len(recipe)/2):
                             craftSuccess = True
                             for j in range(checkedRes):
                                 
-                                dir = getDirectory(recipe[str(j)])
-
+                                totalAmount = amount * int(recipe["r" + str(i)])
+                                dir, inputRecipe = getDirectory(recipe[str(j)], interaction.user.id, totalAmount)
+                                
                                 #Remove materials
-                                if dir.find_one({'id' : interaction.user.id})[recipe[str(j)]] - amount * int(recipe["r" + str(j)]) != 0:
-                                    dir.update_one({'id' : interaction.user.id}, {"$set":{recipe[str(j)] : dir.find_one({'id' : interaction.user.id})[recipe[str(j)]] - amount * int(recipe["r" + str(j)])}})
+                                if dir.find_one({'id' : interaction.user.id})[inputRecipe] - amount * int(recipe["r" + str(j)]) != 0:
+                                    dir.update_one({'id' : interaction.user.id}, {"$set":{inputRecipe : dir.find_one({'id' : interaction.user.id})[inputRecipe] - amount * int(recipe["r" + str(j)])}})
                                 else:
-                                    dir.update_one({'id' : interaction.user.id}, {'$unset' : {recipe[str(j)] : ''}})
+                                    dir.update_one({'id' : interaction.user.id}, {'$unset' : {inputRecipe : ''}})
 
                 if not craftSuccess:
                     if selectedOption:

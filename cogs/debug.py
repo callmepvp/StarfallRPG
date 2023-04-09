@@ -46,7 +46,7 @@ class debug(commands.Cog):
 
                         #In the future add a check to see if the amount of collections on the database match the ones in the array
                         directories = [general, skills, collections, recipes, inventory, areas]
-                        #Has to look through: general, skills, collections, recipes
+                        #Has to look through: general, skills, collections, recipes, areas
                         for directory in directories: #Add all data from each document to a string and delete the document
                             for key, value in directory.find_one({'id' : int(argument)}).items():
                                 if int(len(directory.find_one({'id' : int(argument)}).items())) > 2:

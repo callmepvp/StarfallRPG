@@ -88,7 +88,29 @@ class fishing(commands.Cog):
                         weights.append(fishingData[item][0]['weight'])
 
                 if len(choices) != 0:
-                    fish = random.choices(choices, weights=weights)[0]
+                    treasureThreshold = general.find_one({'id' : interaction.user.id})['treasureChance']
+                    trashThreshold = general.find_one({'id' : interaction.user.id})['trashChance']
+
+                    #1, 50, 49 - Default values
+                    #Give the right fishing drop based on fishing chance stats
+                    percentage = random.randint(1, 100)
+
+                    #! Treasure and Trash can't give collection, but slight fishing XP and essence. Also needs different messages to be sent
+                    if 0 < percentage <= treasureThreshold:
+                        #Treasure
+                        """
+                        Treasures include >
+                        * Coins (Random amount between 10-500)
+                        * Treasure Crates (Crates can be opened under /crate) (To be added)
+                        """
+                        print("Treasure")
+                    elif treasureThreshold < percentage <= trashThreshold:
+                        #Trash
+                        print("Trash")
+                    else:
+                        #Fish
+                        fish = random.choices(choices, weights=weights)[0]
+
                     amount = random.randint(1, 2)
 
                     #Update inventory and send response
