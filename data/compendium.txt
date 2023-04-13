@@ -19,3 +19,6 @@ Item rarity
 Item description
 Found in what areas
 Amount of base XP and for what skill
+
+Add the option to get a premium guild if an owner buys access to it (has tons of perks and whatnot)
+Add the option to get a premium account subscription

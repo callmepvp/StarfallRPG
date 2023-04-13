@@ -77,6 +77,7 @@ class fishing(commands.Cog):
                 #Choosing the fishing item
                 weights = []
                 choices = []
+                fishCompletion = False
 
                 tier = general.find_one({'id' : interaction.user.id})['rodTier'] #Current fRod Tier
                 currentSubSetting = areas.find_one({'id' : interaction.user.id})['subareaType'] #Current Subarea Type
@@ -103,67 +104,82 @@ class fishing(commands.Cog):
                         * Coins (Random amount between 10-500)
                         * Treasure Crates (Crates can be opened under /crate) (To be added)
                         """
-                        print("Treasure")
+                        treasureChoices = ["coins", "crate"]
+                        choice = random.choice(treasureChoices)
+
+                        if choice == "coins":
+                            amount = random.randint(10, 500)
+                            fish = choice
+                        else:
+                            """
+                            The Crate System will allow players to get crates through certain actions
+
+                            The Crates include:
+                            Common, Uncommon
+                            """
+                            pass
+                        
                     elif treasureThreshold < percentage <= trashThreshold:
                         #Trash
-                        print("Trash")
+                        amount = random.randint(1, 2)
                     else:
                         #Fish
+                        fishCompletion = True
+                        amount = random.randint(1, 2)
                         fish = random.choices(choices, weights=weights)[0]
-
-                    amount = random.randint(1, 2)
 
                     #Update inventory and send response
                     message = []
-
-                    currentInventory = inventory.find_one({'id' : interaction.user.id, fish : {'$exists' : True}})
-                    if currentInventory is None:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : amount}})
-                    else:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : currentInventory[fish] + amount}})
-
                     message.append(f":fishing_pole_and_fish: You **Fished**! You got **{amount}** x **{string.capwords(fish)}**!")
 
-                    xp = fishingData[fish][0]['xp'] * amount
-                    existingXP = skills.find_one({'id' : interaction.user.id})['fishingXP']
-                    existingLevel = skills.find_one({'id' : interaction.user.id})['fishingLevel']
-                    existingBonus = skills.find_one({'id' : interaction.user.id})['fishingBonus']
-                    existingEssence = general.find_one({'id' : interaction.user.id})['fishingEssence']
-                    bonusAmount = 4 #Increase this skills bonus by this amount each level up
+                    if fishCompletion:
 
-                    #Give essence
-                    essenceFormula = round((xp * 0.35), 2)
-                    general.update_one({'id' : interaction.user.id}, {"$set":{'fishingEssence' : existingEssence + essenceFormula}})
-                    message.append(f"\n :sparkles: You gained **{essenceFormula} Fishing Essence**!")
-
-                    #Give skill XP
-                    if existingXP + xp >= (50*existingLevel+10):
-                        leftoverXP = (existingXP + xp) - (50*existingLevel+10)
-                        if leftoverXP == 0:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : 0, 'fishingLevel' : existingLevel + 1}})
+                        currentInventory = inventory.find_one({'id' : interaction.user.id, fish : {'$exists' : True}})
+                        if currentInventory is None:
+                            inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : amount}})
                         else:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : leftoverXP, 'fishingLevel' : existingLevel + 1}})
+                            inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : currentInventory[fish] + amount}})
 
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingBonus' : existingBonus + bonusAmount}})
-                        message.append('\n' f':star: You gained **{xp} Fishing** XP!' '\n' f'**[LEVEL UP]** Your **Fishing** leveled up! You are now **Fishing** level **{existingLevel + 1}**!' '\n' f'**[LEVEL BONUS]** **WIP** Bonus: **{existingBonus}** ⇒ **{existingBonus + bonusAmount}**')
-                    else:
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : existingXP + xp}})
-                        message.append('\n' f':star: You gained **{xp} Fishing** XP!')
-                    
-                    #Give Collections
-                    currentFish = collections.find_one({'id' : interaction.user.id})['fish']
-                    currentFishLevel = collections.find_one({'id' : interaction.user.id})['fishLevel']
+                        xp = fishingData[fish][0]['xp'] * amount
+                        existingXP = skills.find_one({'id' : interaction.user.id})['fishingXP']
+                        existingLevel = skills.find_one({'id' : interaction.user.id})['fishingLevel']
+                        existingBonus = skills.find_one({'id' : interaction.user.id})['fishingBonus']
+                        existingEssence = general.find_one({'id' : interaction.user.id})['fishingEssence']
+                        bonusAmount = 4 #Increase this skills bonus by this amount each level up
 
-                    if currentFish + amount >= (currentFishLevel*50 + 50):
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'fishLevel' : currentFishLevel + 1}})
-                        message.append('\n' f'**[COLLECTION]** **Fish** Collection Level **{currentFishLevel}** ⇒ **{currentFishLevel + 1}**')
-                    
-                        #Give collection rewards
-                        for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['fishLevel']}"]:
-                            recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
-                    else:
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
+                        #Give essence
+                        essenceFormula = round((xp * 0.35), 2)
+                        general.update_one({'id' : interaction.user.id}, {"$set":{'fishingEssence' : existingEssence + essenceFormula}})
+                        message.append(f"\n :sparkles: You gained **{essenceFormula} Fishing Essence**!")
+
+                        #Give skill XP
+                        if existingXP + xp >= (50*existingLevel+10):
+                            leftoverXP = (existingXP + xp) - (50*existingLevel+10)
+                            if leftoverXP == 0:
+                                skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : 0, 'fishingLevel' : existingLevel + 1}})
+                            else:
+                                skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : leftoverXP, 'fishingLevel' : existingLevel + 1}})
+
+                            skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingBonus' : existingBonus + bonusAmount}})
+                            message.append('\n' f':star: You gained **{xp} Fishing** XP!' '\n' f'**[LEVEL UP]** Your **Fishing** leveled up! You are now **Fishing** level **{existingLevel + 1}**!' '\n' f'**[LEVEL BONUS]** **WIP** Bonus: **{existingBonus}** ⇒ **{existingBonus + bonusAmount}**')
+                        else:
+                            skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : existingXP + xp}})
+                            message.append('\n' f':star: You gained **{xp} Fishing** XP!')
+                        
+                        #Give Collections
+                        currentFish = collections.find_one({'id' : interaction.user.id})['fish']
+                        currentFishLevel = collections.find_one({'id' : interaction.user.id})['fishLevel']
+
+                        if currentFish + amount >= (currentFishLevel*50 + 50):
+                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
+                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fishLevel' : currentFishLevel + 1}})
+                            message.append('\n' f'**[COLLECTION]** **Fish** Collection Level **{currentFishLevel}** ⇒ **{currentFishLevel + 1}**')
+                        
+                            #Give collection rewards
+                            for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['fishLevel']}"]:
+                                recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
+                        else:
+                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
 
                     await interaction.response.send_message(''.join(message))
                 else:

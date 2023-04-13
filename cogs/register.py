@@ -3,6 +3,7 @@ from discord.ui import Button, View
 from discord import app_commands
 from discord.ext import commands
 
+import asyncio
 import datetime
 import time
 from json import loads
@@ -34,12 +35,12 @@ class register(commands.Cog):
         if general.find_one({'id' : interaction.user.id}) is None:
         
             embed = discord.Embed(title = f"Welcome to Alphaworks, {interaction.user.display_name}!", 
-                                description = "*Before proceeding, please read this thoroughly!* \n\n **[1]** Do not abuse exploits or bugs of any kind \n **[2]** Use only one account per person", 
+                                description = "*Before proceeding, please read this thoroughly!* \n\n **[1]** Do not abuse exploits or bugs of any kind. \n **[2]** Use only one account per person. \n\n:information_source: Starfall RPG processes some of your data such as username, ID and profile picture.", 
                                 color = discord.Color.random(), 
                                 timestamp = datetime.datetime.now())
-
+            
             button = Button(label = "I understand.", style = discord.ButtonStyle.gray, emoji = "👌")
-            async def button_callback(interaction):
+            async def button_callback(interaction: discord.Interaction):
                 button.style = discord.ButtonStyle.green
 
                 #Setup the profile and inventory on MongoDB
@@ -101,7 +102,37 @@ class register(commands.Cog):
 
                 recipes.insert_one(recipeData)
 
-                await interaction.response.edit_message(content="Profile Setup, Happy Playing!", embed = None, view = None)
+                #Character Customization 1/x
+                embed = discord.Embed(title = f"Choose Your Name, {interaction.user.display_name}! **(1/2)**", 
+                                    description = "",
+                                    color = discord.Color.random(), 
+                                    timestamp = datetime.datetime.now())
+                embed.set_footer(text="*Some quote here...*")
+                            
+                embed.add_field(name="Race", value="`TEST_RACE`", inline=False)
+                embed.add_field(name="Race Bonus", value="`BONUS_1`", inline=True)
+                embed.add_field(name="Race Bonus", value="`BONUS_2`", inline=True)
+                embed.add_field(name="Lineage", value="`TEST_LINEAGE`", inline=False)
+                embed.add_field(name="Area", value="`TEST_AREA`", inline=True) #Plains, Desert etc.
+                embed.add_field(name="Sub-Region", value="`TEST_REGION`", inline=True) #Sunken Lagoon etc.
+
+                embed.add_field(name="Name", value="**Who knows?**", inline=False)
+
+                await interaction.response.edit_message(embed = embed, view = None)
+
+                try: 
+                    answer = await self.bot.wait_for("message", check=lambda m: m.author.id == interaction.user.id and m.channel.id == interaction.channel_id, timeout=120.0)
+
+                    #Character Customization 2/x
+                    #Check if the given name is compatible and appropriate
+                    embed.title = f"Customize Your Avatar, {answer.content}! **(2/2)**"
+                    embed.clear_fields()
+                    embed.set_image(url="https://i.ibb.co/QY3x3Vb/background.gif")
+
+                    await answer.delete()
+                    await interaction.edit_original_response(embed = embed)
+                except asyncio.TimeoutError:
+                    await interaction.edit_original_response(embed = None, view = None, content = "The registering process **timed out**. You have to **retry**.")
 
             button.callback = button_callback
 
