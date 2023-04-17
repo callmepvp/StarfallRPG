@@ -7,3 +7,4 @@ Explore vast biomes and areas, hold legendary battles with the undead, craft and
 Before you are able to use any commands, you must setup your account with `/register`.
 *(Read through all the rules very carefully!)*
 
+Your main arsenal of action commands include X skill commands: `/forage`, `/mine`, `/fish`, `/scavenge`, `/farm`
