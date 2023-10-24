@@ -96,57 +96,104 @@ class fishing(commands.Cog):
                     #Give the right fishing drop based on fishing chance stats
                     percentage = random.randint(1, 100)
 
-                    #! Treasure and Trash can't give collection, but slight fishing XP and essence. Also needs different messages to be sent
+                    #necessary to differentiate between different fishing item types
+                    fishType = None
+
                     if 0 < percentage <= treasureThreshold:
                         #Treasure
-                        """
-                        Treasures include >
-                        * Coins (Random amount between 10-500)
-                        * Treasure Crates (Crates can be opened under /crate) (To be added)
-                        """
-                        treasureChoices = ["coins", "crate"]
-                        choice = random.choice(treasureChoices)
-
-                        if choice == "coins":
+                        treasureChoice = random.choice(["coins", "crate"])
+                        if treasureChoice == "coins":
+                            """
+                            Coins will be directly deposited to the players wallet
+                            """
+                            fish = treasureChoice
+                            fishType = "coins"
                             amount = random.randint(10, 500)
-                            fish = choice
+                            fishCompletion = True
+
                         else:
                             """
                             The Crate System will allow players to get crates through certain actions
 
                             The Crates include:
-                            Common, Uncommon
+                            Common, Uncommon, Rare, Legendary
                             """
-                            pass
+                            crates = ["common crate", "uncommon crate", "rare crate", "legendary crate"]
+                            fish = random.choice(crates)
+                            cratePosition = crates.index(fish)
+                            fishType = "crate"
+                            amount = 1
+                            fishCompletion = True
                         
                     elif treasureThreshold < percentage <= trashThreshold:
                         #Trash
+                        #! maybe change the trashitems to pull it out of a fishingdata file, not hard-coded in
+                        trashItems = ["rubber duck", "boot", "seaweed"]
+                        fish = random.choice(trashItems)
+                        fishType = "fish" #this is because trash items are treated as the same inventory objects as fish
                         amount = random.randint(1, 2)
+                        fishCompletion = True
+
                     else:
                         #Fish
-                        fishCompletion = True
-                        amount = random.randint(1, 2)
                         fish = random.choices(choices, weights=weights)[0]
+                        fishType = "fish"
+                        amount = random.randint(1, 2)
+                        fishCompletion = True
 
                     #Update inventory and send response
                     message = []
                     message.append(f":fishing_pole_and_fish: You **Fished**! You got **{amount}** x **{string.capwords(fish)}**!")
 
                     if fishCompletion:
+                        #we need to differentiate between inventory items and non-inventory items
 
-                        currentInventory = inventory.find_one({'id' : interaction.user.id, fish : {'$exists' : True}})
-                        if currentInventory is None:
-                            inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : amount}})
-                        else:
-                            inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : currentInventory[fish] + amount}})
-
-                        xp = fishingData[fish][0]['xp'] * amount
+                        #define some necessary variables
                         existingXP = skills.find_one({'id' : interaction.user.id})['fishingXP']
                         existingLevel = skills.find_one({'id' : interaction.user.id})['fishingLevel']
                         existingBonus = skills.find_one({'id' : interaction.user.id})['fishingBonus']
                         existingEssence = general.find_one({'id' : interaction.user.id})['fishingEssence']
                         bonusAmount = 4 #Increase this skills bonus by this amount each level up
 
+                        if fishType == "fish":
+                            xp = fishingData[fish][0]['xp'] * amount
+                            currentInventory = inventory.find_one({'id' : interaction.user.id, fish : {'$exists' : True}})
+                            if currentInventory is None:
+                                inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : amount}})
+                            else:
+                                inventory.update_one({'id' : interaction.user.id}, {"$set":{fish : currentInventory[fish] + amount}})
+                            
+                            #Give Collections
+                            currentFish = collections.find_one({'id' : interaction.user.id})['fish']
+                            currentFishLevel = collections.find_one({'id' : interaction.user.id})['fishLevel']
+
+                            if currentFish + amount >= (currentFishLevel*50 + 50):
+                                collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
+                                collections.update_one({'id' : interaction.user.id}, {"$set":{'fishLevel' : currentFishLevel + 1}})
+                                message.append('\n' f'**[COLLECTION]** **Fish** Collection Level **{currentFishLevel}** ⇒ **{currentFishLevel + 1}**')
+                            
+                                #Give collection rewards
+                                for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['fishLevel']}"]:
+                                    recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
+                            else:
+                                collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
+                        else:
+                            #has to be something other than fish
+
+                            xp = 4 #hardcoded treasure xp amount
+                            if fishType == "crate":
+                                message.append("\n :package: Treasure Catch! :package:")
+                                #update the users crate list argument crates = []
+                                currentCrates = general.find_one({'id' : interaction.user.id})['crates']
+                                currentCrates[cratePosition] += 1
+                                general.update_one({'id' : interaction.user.id}, {"$set":{'crates' : currentCrates}})
+
+                            elif fishType == "coins":
+                                currentCoins = general.find_one({'id' : interaction.user.id})['wallet']
+                                general.update_one({'id' : interaction.user.id}, {"$set":{'wallet' : currentCoins + amount}})
+                                message.append("\n :moneybag: Treasure Catch! :moneybag:")
+
+                        #these will be given regardless of the type of item
                         #Give essence
                         essenceFormula = round((xp * 0.35), 2)
                         general.update_one({'id' : interaction.user.id}, {"$set":{'fishingEssence' : existingEssence + essenceFormula}})
@@ -165,21 +212,6 @@ class fishing(commands.Cog):
                         else:
                             skills.update_one({'id' : interaction.user.id}, {"$set":{'fishingXP' : existingXP + xp}})
                             message.append('\n' f':star: You gained **{xp} Fishing** XP!')
-                        
-                        #Give Collections
-                        currentFish = collections.find_one({'id' : interaction.user.id})['fish']
-                        currentFishLevel = collections.find_one({'id' : interaction.user.id})['fishLevel']
-
-                        if currentFish + amount >= (currentFishLevel*50 + 50):
-                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
-                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fishLevel' : currentFishLevel + 1}})
-                            message.append('\n' f'**[COLLECTION]** **Fish** Collection Level **{currentFishLevel}** ⇒ **{currentFishLevel + 1}**')
-                        
-                            #Give collection rewards
-                            for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['fishLevel']}"]:
-                                recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
-                        else:
-                            collections.update_one({'id' : interaction.user.id}, {"$set":{'fish' : currentFish + amount}})
 
                     await interaction.response.send_message(''.join(message))
                 else:

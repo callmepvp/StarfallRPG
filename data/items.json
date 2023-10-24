@@ -9,6 +9,36 @@
         }
     ],
 
+    "rubber duck" : [
+        {
+            "type" : "fish",
+            "rarity" : "trash",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Fishing XP"  
+        }
+    ],
+
+    "boot" : [
+        {
+            "type" : "fish",
+            "rarity" : "trash",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Fishing XP"  
+        }
+    ],
+
+    "seaweed" : [
+        {
+            "type" : "fish",
+            "rarity" : "trash",
+            "description" : "",
+            "found" : ["plains"],
+            "skillXP" : "1 Fishing XP"  
+        }
+    ],
+
     "perch" : [
         {
             "type" : "fish",

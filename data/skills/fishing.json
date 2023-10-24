@@ -1,4 +1,31 @@
 {
+    "rubber duck" : [
+        {
+            "xp" : 1,
+            "weight" : 1,
+            "tiers" : "hsc",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
+    "boot" : [
+        {
+            "xp" : 1,
+            "weight" : 1,
+            "tiers" : "hsc",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
+    "seaweed" : [
+        {
+            "xp" : 1,
+            "weight" : 1,
+            "tiers" : "hsc",
+            "subareas" : ["outside", "small", "large"]
+        }
+    ],
+
     "perch" : [
         {
             "xp" : 1,

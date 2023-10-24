@@ -50,8 +50,9 @@ class register(commands.Cog):
                 generalData = {
                     'id' : interaction.user.id,
                     'name' : interaction.user.display_name,
+                    'wallet' : 0,
                     'creation' : time.time(),
-                    'stamina' : 200,
+                    'stamina' : 200, 'crates' : [0, 0, 0, 0], #* the crates list will hold the NUMBER of crates of each type in ascending rarity: common -> legendary
                     'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h', 'rodTier' : 'h', #Tool Tiers > Necessary for limiting certain drops to certain tools
                     'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0, 'fishingEssence' : 0, #Skill Essences
                     'treasureChance' : 1, 'trashChance' : 50 #Necessary fishing stats
