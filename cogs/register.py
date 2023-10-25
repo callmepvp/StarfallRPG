@@ -53,7 +53,6 @@ class register(commands.Cog):
                     'wallet' : 0,
                     'creation' : time.time(),
                     'stamina' : 200, 'crates' : [0, 0, 0, 0], #* the crates list will hold the NUMBER of crates of each type in ascending rarity: common -> legendary
-                    'pickaxeTier' : 'h', 'axeTier' : 'h', 'hoeTier' : 'h', 'gloveTier' : 'h', 'rodTier' : 'h', #Tool Tiers > Necessary for limiting certain drops to certain tools
                     'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0, 'fishingEssence' : 0, #Skill Essences
                     'treasureChance' : 1, 'trashChance' : 50 #Necessary fishing stats
                 }
@@ -63,9 +62,16 @@ class register(commands.Cog):
                 #Currently holds no use except for fishing (will be used later) (Might randomize starting location later)
                 areaData = {
                     'id' : interaction.user.id,
+                    'currentArea' : 'plains',
                     'currentSubarea' : 'sunken lagoon', #Default spawning locations for every new player
                     'subareaType' : 'small', #Extra arguments for subareas, if needed
-                    'currentArea' : 'plains'
+                    
+                    #these hold the arrays for all available items for harvest for the player (to save computing time)
+                    'availableSc' : [],
+                    'availableFa' : [],
+                    'availableFi' : [],
+                    'availableFo' : [],
+                    'availableMi' : []
                 }
 
                 areas.insert_one(areaData)
@@ -78,7 +84,8 @@ class register(commands.Cog):
                     'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0,
                     'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0,
                     'scavengingLevel' : 0, 'scavengingXP' : 0, 'scavengingBonus' : 0,
-                    'fishingLevel' : 0, 'fishingXP' : 0, 'fishingBonus' : 0
+                    'fishingLevel' : 0, 'fishingXP' : 0, 'fishingBonus' : 0,
+                    'miningTier' : '1hand', 'foragingTier' : '1hand', 'farmingTier' : '1hand', 'scavengingTier' : '1hand', 'fishingTier' : '1hand' #2 Unique values per tier: hand and 1hand (1hand if function isnt ran yet)
                 }
                 
                 skills.insert_one(skillData)

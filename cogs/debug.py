@@ -52,37 +52,40 @@ class debug(commands.Cog):
         name = "debug",
         description = "Doesn't work, does it?")
 
-    async def debug(self,interaction: discord.Interaction, option: typing.Literal['Profile Delete', 'Info'], argument: str, argument2: str = None):
+    async def debug(self,interaction: discord.Interaction, option: typing.Literal['Profile Delete', 'Info'], argument: str = None, argument2: str = None):
         if general.find_one({'id' : interaction.user.id}) is not None:
             if interaction.user.id == OWNER_ID:
                 
                 if option == 'Profile Delete':
                     #Delete any profile from the database
-                    if general.find_one({'id' : int(argument)}) is not None:
-                        await interaction.response.defer() #Acknowledged the interaction
-                        name = general.find_one({'id' : int(argument)})['name']
-                        
-                        savedData = "" #Save all data as a string
-
-                        #In the future add a check to see if the amount of collections on the database match the ones in the array
-                        directories = [general, skills, collections, recipes, inventory, areas]
-                        #Has to look through: general, skills, collections, recipes, areas
-                        for directory in directories: #Add all data from each document to a string and delete the document
-                            for key, value in directory.find_one({'id' : int(argument)}).items():
-                                if int(len(directory.find_one({'id' : int(argument)}).items())) > 2:
-                                    if key != '_id':
-                                        if key != 'id':
-                                            savedData = savedData + str(key) + " -> " + str(value) + "\n"
+                    if argument is not None:
+                        if general.find_one({'id' : int(argument)}) is not None:
+                            await interaction.response.defer() #Acknowledged the interaction
+                            name = general.find_one({'id' : int(argument)})['name']
                             
-                            directory.delete_one({'id' : int(argument)})
-                        
-                        #Construct the .txt file to send
-                        fileData = discord.File(io.BytesIO(savedData.encode()), filename=f"data_{int(argument)}.txt")
-                        channel = self.bot.get_channel(1087847199221747804) #Hardcoded channel ID for the debug log (Change if necessary); will later be an option
-                        await channel.send(f"**{interaction.user.display_name}** deleted the profile of **{name}**! \nDeleted ID: **{int(argument)}** \nStaff ID: **{interaction.user.id}** \nReason: **{str(argument2)}**", file=fileData)
-                        await interaction.followup.send(ephemeral=True, content=f"Successfully deleted profile with ID **{int(argument)}** with the name **{name}**! Bye!")
+                            savedData = "" #Save all data as a string
+
+                            #In the future add a check to see if the amount of collections on the database match the ones in the array
+                            directories = [general, skills, collections, recipes, inventory, areas]
+                            #Has to look through: general, skills, collections, recipes, areas
+                            for directory in directories: #Add all data from each document to a string and delete the document
+                                for key, value in directory.find_one({'id' : int(argument)}).items():
+                                    if int(len(directory.find_one({'id' : int(argument)}).items())) > 2:
+                                        if key != '_id':
+                                            if key != 'id':
+                                                savedData = savedData + str(key) + " -> " + str(value) + "\n"
+                                
+                                directory.delete_one({'id' : int(argument)})
+                            
+                            #Construct the .txt file to send
+                            fileData = discord.File(io.BytesIO(savedData.encode()), filename=f"data_{int(argument)}.txt")
+                            channel = self.bot.get_channel(1087847199221747804) #Hardcoded channel ID for the debug log (Change if necessary); will later be an option
+                            await channel.send(f"**{interaction.user.display_name}** deleted the profile of **{name}**! \nDeleted ID: **{int(argument)}** \nStaff ID: **{interaction.user.id}** \nReason: **{str(argument2)}**", file=fileData)
+                            await interaction.followup.send(ephemeral=True, content=f"Successfully deleted profile with ID **{int(argument)}** with the name **{name}**! Bye!")
+                        else:
+                            await interaction.response.send_message(ephemeral=True, content="ID was not found on the database!")
                     else:
-                        await interaction.response.send_message(ephemeral=True, content="ID was not found on the database!")
+                        await interaction.response.send_message(ephemeral=True, content="Please input a valid user ID.")
 
                 elif option == "Info":
                     """

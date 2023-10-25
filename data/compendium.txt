@@ -3,7 +3,7 @@ Some Notes:
 Tool Rarities -> Hand h; Stone s; Copper c; Iron i
 (Each rarity will increase item drops)
 
-Collections -> Wood, Ore, Crop
+Collections -> Wood, Ore, Crop, Fish, Herb
 (Every collection unlocks useful recipes to advance in the adventure)
 
 1 Skill XP = 0.3 Essence

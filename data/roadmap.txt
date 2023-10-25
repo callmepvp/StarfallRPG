@@ -1,0 +1,12 @@
+Currently working on optimising skill commands.
+
+ONLY WORKING ON SCAVENGING RIGHT NOW! (don't touch any other skill commands in this branch)
+
+
+Scavenging Command ->
+Has to update: Inventory values, essence value, collection value, skill values
+Has to search for: suitable items based on users tier of tool (How to do that?)
+
+Player properties to consider: tier of tool, player area
+
+File with all items sorted by location and then tool type?

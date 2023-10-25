@@ -30,6 +30,7 @@ class Client(commands.Bot):
         for name in os.listdir("./cogs/skills"):
             if name.endswith(".py"):
                 await bot.load_extension("cogs.skills.{}".format(name[:-3]))
+
         await bot.tree.sync(guild = discord.Object(id = 1047945458665914388))
 
     async def close(self):

@@ -1,101 +1,24 @@
 {
-    "wheat" : [
-        {
-            "type" : "farmable",
+    "items" : {
+        "silverleaf" : {
+            "name" : "silverleaf",
+            "type" : "harvestable",
             "rarity" : "common",
             "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Farming XP"
-        }
-    ],
-
-    "rubber duck" : [
-        {
-            "type" : "fish",
-            "rarity" : "trash",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Fishing XP"  
-        }
-    ],
-
-    "boot" : [
-        {
-            "type" : "fish",
-            "rarity" : "trash",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Fishing XP"  
-        }
-    ],
-
-    "seaweed" : [
-        {
-            "type" : "fish",
-            "rarity" : "trash",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Fishing XP"  
-        }
-    ],
-
-    "perch" : [
-        {
-            "type" : "fish",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+        "needlegrass" : {
+            "name" : "needlegrass",
+            "type" : "harvestable",
             "rarity" : "common",
             "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Fishing XP"
+            "xp" : 2,
+            "weight" : 7,
+            "location" : "plains",
+            "tier" : "hand"
         }
-    ],
-
-    "cod" : [
-        {
-            "type" : "fish",
-            "rarity" : "common",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "1 Fishing XP"
-        }
-    ],
-
-    "trout" : [
-        {
-            "type" : "fish",
-            "rarity" : "common",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "3 Fishing XP"
-        }
-    ],
-
-    "bluegill" : [
-        {
-            "type" : "fish",
-            "rarity" : "uncommon",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "4 Fishing XP"
-        }
-    ],
-
-    "catfish" : [
-        {
-            "type" : "fish",
-            "rarity" : "rare",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "6 Fishing XP"
-        }
-    ],
-
-    "carp" : [
-        {
-            "type" : "fish",
-            "rarity" : "rare",
-            "description" : "",
-            "found" : ["plains"],
-            "skillXP" : "6 Fishing XP"
-        }
-    ]
+    }
 }
