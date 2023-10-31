@@ -2,7 +2,7 @@
     "items" : {
         "silverleaf" : {
             "name" : "silverleaf",
-            "type" : "harvestable",
+            "type" : "scavenging",
             "rarity" : "common",
             "description" : "",
             "xp" : 1,
@@ -10,12 +10,134 @@
             "location" : "plains",
             "tier" : "hand"
         },
+        
         "needlegrass" : {
             "name" : "needlegrass",
-            "type" : "harvestable",
+            "type" : "scavenging",
             "rarity" : "common",
             "description" : "",
             "xp" : 2,
+            "weight" : 7,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "stone" : {
+            "name" : "stone",
+            "type" : "mining",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "coal" : {
+            "name" : "coal",
+            "type" : "mining",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 8,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "oak" : {
+            "name" : "oak",
+            "type" : "foraging",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "rubber duck" : {
+            "name" : "rubber duck",
+            "type" : "trash",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 1,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "boot" : {
+            "name" : "boot",
+            "type" : "trash",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 1,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "seaweed" : {
+            "name" : "seaweed",
+            "type" : "trash",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 1,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "perch" : {
+            "name" : "perch",
+            "type" : "fishing",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "cod" : {
+            "name" : "cod",
+            "type" : "fishing",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "trout" : {
+            "name" : "trout",
+            "type" : "fishing",
+            "rarity" : "uncommon",
+            "description" : "",
+            "xp" : 3,
+            "weight" : 8,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "wheat" : {
+            "name" : "wheat",
+            "type" : "farming",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 1,
+            "weight" : 10,
+            "location" : "plains",
+            "tier" : "hand"
+        },
+
+        "carrot" : {
+            "name" : "carrot",
+            "type" : "farming",
+            "rarity" : "common",
+            "description" : "",
+            "xp" : 3,
             "weight" : 7,
             "location" : "plains",
             "tier" : "hand"

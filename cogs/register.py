@@ -69,7 +69,8 @@ class register(commands.Cog):
                     #these hold the arrays for all available items for harvest for the player (to save computing time)
                     'availableSc' : [],
                     'availableFa' : [],
-                    'availableFi' : [],
+                    'availableFiFishing' : [],
+                    'availableFiTrash' : [],
                     'availableFo' : [],
                     'availableMi' : []
                 }

@@ -15,20 +15,11 @@ from ..functions.dataManagement import *
 
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
-scavengingData = loads(Path("data/skills/scavenging.json").read_text())
-collectionData = loads(Path("data/collections/herb.json").read_text())
 itemsData = loads(Path("data/items.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
 general = cluster['alphaworks']['general']
-inventory = cluster['alphaworks']['inventory']
-skills = cluster['alphaworks']['skills']
-collections = cluster['alphaworks']['collections']
-recipes = cluster['alphaworks']['recipes']
-areas = cluster['alphaworks']['areas']
-
-#the form to get items without using a for loop: print(itemsData['items'].get("hand", {}).get("plains", [])) -> [{'name': 'silverleaf'}, {'name': 'needlegrass'}]
 
 class scavenging(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:

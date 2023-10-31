@@ -11,3 +11,5 @@ cogs/__pycache__/debug.cpython-311.pyc
 cogs/skills/__pycache__/scavenging.cpython-311.pyc
 cogs/skills/__pycache__/fishing.cpython-311.pyc
 __pycache__/index.cpython-311.pyc
+.vscode
+*.pyc

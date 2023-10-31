@@ -1,5 +1,7 @@
 #this file will hold all important methods to save, load and handle inventory, collection, area and general data.
 
+#the form to get items without using a for loop: print(itemsData['items'].get("hand", {}).get("plains", [])) -> [{'name': 'silverleaf'}, {'name': 'needlegrass'}]
+
 from json import loads
 from pathlib import Path
 
@@ -88,24 +90,38 @@ def updateCollections(userID: int, amount: int, collectionType: str, messageArra
 #* Resource Management Methods
 
 #Also returns their weights by default
-def updateAndReturnAvailableResources(userID: int, skill: str):
+def updateAndReturnAvailableResources(userID: int, skill: str, extraArgument: str = None):
 
     searchTier = skill + "Tier"
     searchAvailable = "available" + skill[:2].capitalize()
     tier = skills.find_one({'id' : userID})[searchTier]
+    location = areas.find_one({'id' : userID})["currentArea"]
 
-    choices, weights = [], []
-    if '1' in tier:
-        tier = tier[1:]
-        for itemName, itemData in itemsData['items'].items():
-            if itemData["location"] == "plains" and itemData["tier"] == "hand":
-                choices.append(itemName)
-                weights.append(itemData["weight"])
+    def genereeriList(userID, tier, location, searchAvailable, searchTier, skill):
+        choices, weights = [], []
+        if '1' in tier:
+            tier = tier[1:]
+            for itemName, itemData in itemsData['items'].items():
+                if location in itemData["location"] and tier in itemData["tier"] and skill == itemData["type"]:
+                    choices.append(itemName)
+                    weights.append(itemData["weight"])
 
-        skills.update_one({'id' : userID}, {"$set":{searchTier : tier}})
-        areas.update_one({'id' : userID}, {"$set":{searchAvailable : [choices, weights]}})
-    else:
-        infoArray = areas.find_one({'id' : userID})[searchAvailable]
-        choices, weights = infoArray[0], infoArray[1]
+            skills.update_one({'id' : userID}, {"$set":{searchTier : tier}})
+            areas.update_one({'id' : userID}, {"$set":{searchAvailable : [choices, weights]}})
+        else:
+            infoArray = areas.find_one({'id' : userID})[searchAvailable]
+            choices, weights = infoArray[0], infoArray[1]
 
-    return choices, weights
+        return choices, weights
+
+    if extraArgument == None:
+        choices, weights = genereeriList(userID, tier, location, searchAvailable, searchTier, skill)
+        return choices, weights
+    
+    elif extraArgument == "fishingList":
+        #usually used for skills like fishing where two different lists of items are needed to generate, where one is not dependant on tool
+        choices1, weights1 = genereeriList(userID, tier, location, "availableFiFishing", searchTier, skill)
+        choices2, weights2 = genereeriList(userID, tier, location, "availableFiTrash", searchTier, "trash")
+        return choices1, choices2, weights1, weights2
+
+

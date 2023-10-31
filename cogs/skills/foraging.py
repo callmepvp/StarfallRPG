@@ -10,20 +10,16 @@ from pathlib import Path
 
 from pymongo import MongoClient
 
+#Import all data management methods
+from ..functions.dataManagement import *
+
 #Retrieve tokens & Initialize database
 data = loads(Path("data/config.json").read_text())
-foragingData =loads(Path("data/skills/foraging.json").read_text())
-collectionData = loads(Path("data/collections/wood.json").read_text())
+itemsData = loads(Path("data/items.json").read_text())
 DATABASE_TOKEN = data['DATABASE_TOKEN']
 
 cluster = MongoClient(DATABASE_TOKEN)
 general = cluster['alphaworks']['general']
-inventory = cluster['alphaworks']['inventory']
-skills = cluster['alphaworks']['skills']
-collections = cluster['alphaworks']['collections']
-recipes = cluster['alphaworks']['recipes']
-
-#Hand > Wooden Axe > Copper Axe > Iron Axe > Steel Axe > Gold Axe
 
 class foraging(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -37,76 +33,25 @@ class foraging(commands.Cog):
         if general.find_one({'id' : interaction.user.id}) is not None:
             if general.find_one({'id' : interaction.user.id})['stamina'] != 0: #Stamina Check
 
-                #Choosing the foraging item
-                weights = []
-                choices = []
-
-                #Create a list of choices if the requirements are met
-                tier = general.find_one({'id' : interaction.user.id})['axeTier'] #Current Axe Tier
-                for item in list(foragingData):
-                    if tier in foragingData[item][0]['tiers']:
-                        choices.append(item)
-                        weights.append(foragingData[item][0]['weight'])
+                choices, weights = updateAndReturnAvailableResources(interaction.user.id, "foraging")
 
                 if len(choices) != 0:
-                    wood = random.choices(choices, weights=weights)[0]
+                    choice = random.choices(choices, weights=weights)[0]
                     amount = random.randint(1, 2)
+                    xp = itemsData["items"][choice]["xp"] * amount
 
-                    #Update inventory and send response
                     message = []
-
-                    currentInventory = inventory.find_one({'id' : interaction.user.id, wood : {'$exists' : True}})
-                    if currentInventory is None:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{wood : amount}})
-                    else:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{wood : currentInventory[wood] + amount}})
-
-                    message.append(f":axe: You **Foraged**! You got **{amount}** x **{string.capwords(wood)}**!")
-
-                    #Give skill XP
-                    xp = foragingData[wood][0]['xp'] * amount
-                    existingXP = skills.find_one({'id' : interaction.user.id})['foragingXP']
-                    existingLevel = skills.find_one({'id' : interaction.user.id})['foragingLevel']
-                    existingBonus = skills.find_one({'id' : interaction.user.id})['foragingBonus']
-                    existingEssence = general.find_one({'id' : interaction.user.id})['foragingEssence']
-                    bonusAmount = 1 #Increase this skills bonus by this amount each level up
-
-                    #Give essence
-                    essenceFormula = round((xp * 0.35), 2)
-                    general.update_one({'id' : interaction.user.id}, {"$set":{'foragingEssence' : existingEssence + essenceFormula}})
-                    message.append(f"\n :sparkles: You gained **{essenceFormula} Foraging Essence**!")
-                    
-                    if existingXP + xp >= (50*existingLevel+10):
-                        leftoverXP = (existingXP + xp) - (50*existingLevel+10)
-                        if leftoverXP == 0:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'foragingXP' : 0, 'foragingLevel' : existingLevel + 1}})
-                        else:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'foragingXP' : leftoverXP, 'foragingLevel' : existingLevel + 1}})
-
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'foragingBonus' : existingBonus + bonusAmount}})
-                        message.append('\n' f':star: You gained **{xp} Foraging** XP!' '\n' f'**[LEVEL UP]** Your **Foraging** leveled up! You are now **Foraging** level **{existingLevel + 1}**!' '\n' f'**[LEVEL BONUS]** **WIP** Bonus: **{existingBonus}** ⇒ **{existingBonus + bonusAmount}**')
-                    else:
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'foragingXP' : existingXP + xp}})
-                        message.append('\n' f':star: You gained **{xp} Foraging** XP!')
-                    
-                    #Give Collections
-                    currentWood = collections.find_one({'id' : interaction.user.id})['wood']
-                    currentWoodLevel = collections.find_one({'id' : interaction.user.id})['woodLevel']
-
-                    if currentWood + amount >= (currentWoodLevel*50 + 50):
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'wood' : currentWood + amount}})
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'woodLevel' : currentWoodLevel + 1}})
-                        message.append('\n' f'**[COLLECTION]** **Wood** Collection Level **{currentWoodLevel}** ⇒ **{currentWoodLevel + 1}**')
+                    message.append(f":axe: You **Foraged**! You got **{amount}** x **{string.capwords(choice)}**!")
                         
-                        #Give collection rewards
-                        for i in collectionData[f"{collections.find_one({'id' : interaction.user.id})['woodLevel']}"]:
-                            recipes.update_one({'id' : interaction.user.id}, {"$set":{i : True}}) #Update the users recipes
-                    else:
-                        collections.update_one({'id' : interaction.user.id}, {"$set":{'wood' : currentWood + amount}})
+                    updateInventory(interaction.user.id, choice, amount)
+                    message = updateEssence(interaction.user.id, "foraging", xp, message)
+                    message = updateSkills(interaction.user.id, "foraging", xp, message)
+                    message = updateCollections(interaction.user.id, amount, "wood", message)
 
                     await interaction.response.send_message(''.join(message))
+
                 else:
-                    await interaction.response.send_message(ephemeral=True, content="You don't have a sufficient axe to forage!")
+                    await interaction.response.send_message(ephemeral=True, content="You don't have what it takes to forage!")
             else:
                 await interaction.response.send_message(ephemeral=True, content="You don't have enough stamina!")
         else:
