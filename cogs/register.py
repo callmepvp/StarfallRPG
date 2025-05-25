@@ -101,6 +101,9 @@ class RegisterCog(commands.Cog):
             await db.general.insert_one({
                 "id": user_id,
                 "name": interaction.user.display_name,
+                "bio": "",
+                "maxInventory": 200,
+                "maxStamina": 200,
                 "wallet": 0,
                 "creation": now,
                 "stamina": 200,

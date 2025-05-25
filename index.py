@@ -89,6 +89,12 @@ class Client(commands.Bot):
             logger.debug("Loading extension %s", name)
             await self.load_extension(name)
 
+        # Load sub-folder cogs
+        for cog_path in Path("cogs/features").glob("*.py"):
+            name = f"cogs.features.{cog_path.stem}"
+            logger.debug("Loading extension %s", name)
+            await self.load_extension(name)
+
         # Sync slash commands to a specific guild for faster updates during development
         logger.info("Syncing application commands to GUILD_ID=%d", GUILD_ID)
         await self.tree.sync(guild=discord.Object(id=GUILD_ID))
