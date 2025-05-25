@@ -7,6 +7,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from server.userMethods import regenerate_stamina, calculate_power_rating
+
 # Load items manifest
 _ITEMS_PATH = Path("data/items.json")
 _items_data: Dict[str, Any] = {}
@@ -29,6 +31,25 @@ class ScavengingCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    async def get_regen_user(self, user_id: int) -> Dict | None:
+        db = self.bot.db
+        user = await db.general.find_one({"id": user_id})
+        if user is None:
+            return None
+
+        user = regenerate_stamina(user)
+        power = calculate_power_rating(user)
+        user["powerRating"] = power
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {
+                "stamina": user["stamina"],
+                "lastStaminaUpdate": user["lastStaminaUpdate"],
+                "powerRating": power
+            }}
+        )
+        return user
+
     @app_commands.command(
         name="scavenge",
         description="🪴 Scavenge the wilds for herbs and ingredients!"
@@ -38,7 +59,7 @@ class ScavengingCog(commands.Cog):
         user_id = interaction.user.id
 
         # 1) Registration & stamina
-        profile = await db.general.find_one({"id": user_id})
+        profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message(
                 "❌ You need to `/register` before scavenging!",

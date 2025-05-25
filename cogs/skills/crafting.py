@@ -7,6 +7,8 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import Select, View
 
+from server.userMethods import regenerate_stamina, calculate_power_rating
+
 # Load manifests once at import time
 _ITEMS_PATH = Path("data/items.json")
 _RECIPES_PATH = Path("data/recipes/craftingRecipes.json")
@@ -26,6 +28,25 @@ class CraftingCog(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
+    async def get_regen_user(self, user_id: int) -> Dict | None:
+        db = self.bot.db
+        user = await db.general.find_one({"id": user_id})
+        if user is None:
+            return None
+
+        user = regenerate_stamina(user)
+        power = calculate_power_rating(user)
+        user["powerRating"] = power
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {
+                "stamina": user["stamina"],
+                "lastStaminaUpdate": user["lastStaminaUpdate"],
+                "powerRating": power
+            }}
+        )
+        return user
+
     async def _perform_craft(
         self,
         interaction: discord.Interaction,
@@ -40,7 +61,7 @@ class CraftingCog(commands.Cog):
         user_id = interaction.user.id
 
         # 1) Verify user registered & stamina
-        profile = await db.general.find_one({"id": user_id})
+        profile = await self.get_regen_user(user_id)
         if not profile:
             return False, "❌ You need to `/register` first!", 0
         if profile.get("stamina", 0) <= 0:

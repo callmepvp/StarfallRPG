@@ -4,7 +4,7 @@
       "name": "Goblin Grunt",
       "level": 2,
       "stats": {
-        "hp": 75,
+        "hp": 50,
         "str": 2,
         "def": 2,
         "eva": 3,
@@ -16,7 +16,7 @@
         {"item": "stone", "chance": 0.7, "quantity": [1,3]},
         {"item": "coal", "chance": 0.3, "quantity": [1,2]}
       ],
-      "spawn_areas": ["plains", "forest"],
+      "spawn_areas": ["plains"],
       "respawn_time": 300,
       "behavior": "aggressive",
       "weakness": ["fire", "lightning"]
@@ -25,13 +25,13 @@
       "name": "Plains Coyote",
       "level": 3,
       "stats": {
-        "hp": 90,
-        "str": 4,
-        "def": 3,
+        "hp": 75,
+        "str": 2,
+        "def": 2,
         "eva": 6,
-        "acc": 5
+        "acc": 3
       },
-      "xp": 8,
+      "xp": 10,
       "gold": [8, 12],
       "loot_table": [
         {"item": "animal_bone", "chance": 0.8, "quantity": [1,2]},
@@ -44,13 +44,13 @@
     },
     "mudback_boar": {
       "name": "Mudback Boar",
-      "level": 5,
+      "level": 4,
       "stats": {
-        "hp": 150,
-        "str": 8,
+        "hp": 95,
+        "str": 7,
         "def": 6,
-        "eva": 4,
-        "acc": 7
+        "eva": 2,
+        "acc": 2
       },
       "xp": 15,
       "gold": [12, 18],
@@ -62,48 +62,6 @@
       "respawn_time": 360,
       "behavior": "charging",
       "special_ability": "mud_armor"
-    },
-    "plains_drake": {
-      "name": "Plains Drake",
-      "level": 8,
-      "stats": {
-        "hp": 200,
-        "str": 12,
-        "def": 8,
-        "eva": 9,
-        "acc": 10
-      },
-      "xp": 25,
-      "gold": [15, 25],
-      "loot_table": [
-        {"item": "drake_scale", "chance": 0.6, "quantity": [1,3]},
-        {"item": "dragon_claw", "chance": 0.3}
-      ],
-      "spawn_areas": ["plains"],
-      "respawn_time": 600,
-      "behavior": "territorial",
-      "special_ability": "fire_breath"
-    },
-    "forest_wolf": {
-      "name": "Alpha Wolf",
-      "level": 8,
-      "stats": {
-        "hp": 120,
-        "str": 25,
-        "def": 18,
-        "eva": 30,
-        "acc": 25
-      },
-      "xp": 60,
-      "gold": [10, 25],
-      "loot_table": [
-        {"item": "wolf_pelt", "chance": 0.8},
-        {"item": "sharp_fang", "chance": 0.2}
-      ],
-      "spawn_areas": ["deep_forest"],
-      "respawn_time": 600,
-      "behavior": "pack_hunter",
-      "special_ability": "howl"
     }
   }
 }

@@ -7,6 +7,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from server.userMethods import regenerate_stamina, calculate_power_rating
+
 # Load the global items manifest
 _ITEMS_PATH = Path("data/items.json")
 _items_data: Dict[str, Any] = {}
@@ -32,6 +34,25 @@ class FishingCog(commands.Cog):
         self._trash_items = _get_items_by_type("trash")
         self._crate_rarities = ["common crate", "uncommon crate", "rare crate", "legendary crate"]
 
+    async def get_regen_user(self, user_id: int) -> Dict | None:
+        db = self.bot.db
+        user = await db.general.find_one({"id": user_id})
+        if user is None:
+            return None
+
+        user = regenerate_stamina(user)
+        power = calculate_power_rating(user)
+        user["powerRating"] = power
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {
+                "stamina": user["stamina"],
+                "lastStaminaUpdate": user["lastStaminaUpdate"],
+                "powerRating": power
+            }}
+        )
+        return user
+
     @app_commands.command(
         name="fish",
         description="🎣 Fish the waters for catches, treasure, and surprises!"
@@ -41,7 +62,7 @@ class FishingCog(commands.Cog):
         user_id = interaction.user.id
 
         # 1) Ensure registered & has stamina
-        profile = await db.general.find_one({"id": user_id})
+        profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message(
                 "❌ Please `/register` before you head out to fish!",

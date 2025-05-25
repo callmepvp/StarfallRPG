@@ -20,3 +20,17 @@ def regenerate_stamina(user_data: Dict) -> Dict:
         user_data["lastStaminaUpdate"] = now  # don't stack regeneration
 
     return user_data
+
+def calculate_power_rating(user: dict) -> int:
+    """Calculates and returns a player's Power Rating."""
+    strength = user.get("strength", 0)
+    defense = user.get("defense", 0)
+    evasion = user.get("evasion", 0)
+    accuracy = user.get("accuracy", 0)
+    max_hp = user.get("maxHP", 100)
+
+    bonus_hp = max(0, max_hp - 100)
+    bonus_hp_score = bonus_hp // 5  # every 5 HP above base = +1 power
+
+    power = strength + defense + evasion + accuracy + bonus_hp_score
+    return power

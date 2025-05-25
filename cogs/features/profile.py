@@ -5,7 +5,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.userMethods import regenerate_stamina
+from server.userMethods import regenerate_stamina, calculate_power_rating
 
 class ProfileCog(commands.Cog):
     """Displays detailed player profile info via `/profile`."""
@@ -20,15 +20,17 @@ class ProfileCog(commands.Cog):
             return None
 
         user = regenerate_stamina(user)
+        power = calculate_power_rating(user)
+        user["powerRating"] = power
         await db.general.update_one(
             {"id": user_id},
             {"$set": {
                 "stamina": user["stamina"],
-                "lastStaminaUpdate": user["lastStaminaUpdate"]
+                "lastStaminaUpdate": user["lastStaminaUpdate"],
+                "powerRating": power
             }}
         )
         return user
-
 
     @app_commands.command(
         name="profile",
@@ -59,6 +61,7 @@ class ProfileCog(commands.Cog):
         wallet = gen.get("wallet", 0)
         stamina = gen.get("stamina", 0)
         max_inv = gen.get("maxInventory", 200)
+        power_rating = gen.get("powerRating", 0)
 
         # Essence totals
         essence_keys = ["foragingEssence", "miningEssence", "farmingEssence",
@@ -99,6 +102,7 @@ class ProfileCog(commands.Cog):
         embed.add_field(name="💰 Wallet", value=f"{wallet:,} coins", inline=True)
         embed.add_field(name="💪 Current Stamina", value=f"{stamina}", inline=True)
         embed.add_field(name="🎒 Inventory Slots", value=f"{max_inv}", inline=True)
+        embed.add_field(name="📊 Power Rating", value=f"{power_rating}", inline=True)
 
         embed.add_field(name="❤️ HP", value=f"{hp}/{max_hp}", inline=True)
         embed.add_field(name="💥 Strength", value=f"{strength}", inline=True)

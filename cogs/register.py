@@ -121,7 +121,8 @@ class RegisterCog(commands.Cog):
                 "strength": 1,
                 "defense": 1,
                 "evasion": 1,
-                "accuracy": 1
+                "accuracy": 1,
+                "powerRating": 0 
             })
             await db.areas.insert_one({
                 "id": user_id,

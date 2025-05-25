@@ -7,6 +7,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from server.userMethods import regenerate_stamina, calculate_power_rating
+
 from settings import GUILD_ID
 
 # Load mobs data
@@ -21,6 +23,25 @@ class CombatCog(commands.Cog):
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+
+    async def get_regen_user(self, user_id: int) -> Dict | None:
+        db = self.bot.db
+        user = await db.general.find_one({"id": user_id})
+        if user is None:
+            return None
+
+        user = regenerate_stamina(user)
+        power = calculate_power_rating(user)
+        user["powerRating"] = power
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {
+                "stamina": user["stamina"],
+                "lastStaminaUpdate": user["lastStaminaUpdate"],
+                "powerRating": power
+            }}
+        )
+        return user
 
     def _get_area_mobs(self, area: str) -> List[Tuple[str, Dict[str, Any]]]:
         """Get mobs available in the player's current area."""
@@ -93,6 +114,21 @@ class CombatCog(commands.Cog):
         
         return (new_level - old_level, new_level, leveled_up)
 
+    def _calculate_mob_power(self, mob: Dict[str, Any]) -> int:
+        """Calculate a mob's power rating (excluding HP)."""
+        stats = mob.get("stats", {})
+        return stats.get("str", 0) + stats.get("def", 0) + stats.get("eva", 0) + stats.get("acc", 0)
+
+    def _get_balanced_mob(self, player_power: int, mobs: List[Tuple[str, Dict[str, Any]]], range_padding: int = 10) -> Optional[Tuple[str, Dict[str, Any]]]:
+        """Select a mob with a power rating within ±padding range of the player's."""
+        eligible = [
+            (mob_id, mob) for mob_id, mob in mobs
+            if player_power - range_padding <= self._calculate_mob_power(mob) <= player_power + range_padding
+        ]
+        if eligible:
+            return random.choice(eligible)
+        return random.choice(mobs) if mobs else None
+
     @app_commands.command(
         name="hunt",
         description="⚔️ Seek out dangerous creatures to battle and loot!"
@@ -102,7 +138,7 @@ class CombatCog(commands.Cog):
         user_id = interaction.user.id
 
         # --- 1) Verify player readiness ---
-        profile = await db.general.find_one({"id": user_id})
+        profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message(
                 "🛡️ You need to `/register` before hunting!",
@@ -125,7 +161,14 @@ class CombatCog(commands.Cog):
             )
 
         # --- 3) Combat simulation ---
-        mob_id, mob = random.choice(available_mobs)
+        mob_choice = self._get_balanced_mob(profile["powerRating"], available_mobs, range_padding=5)
+        if not mob_choice:
+            return await interaction.response.send_message(
+                "⚠️ Couldn't find a suitable creature to battle.",
+                ephemeral=True
+            )
+        mob_id, mob = mob_choice
+
         player_stats = await self._calculate_stats(user_id)
         mob_hp = mob["stats"]["hp"]
         player_hp = player_stats["current_hp"]
