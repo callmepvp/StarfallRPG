@@ -94,6 +94,11 @@ class ForagingCog(commands.Cog):
                 {"$set": {"foragingLevel": old_lvl + 1, "foragingXP": leftover},
                  "$inc": {"foragingBonus": bonus_inc}}
             )
+
+            await db.general.update_one(
+                {"id": user_id},
+                {"$inc": {"strength": bonus_inc}}
+            )
         else:
             await db.skills.update_one(
                 {"id": user_id}, {"$set": {"foragingXP": new_xp}}
@@ -153,7 +158,8 @@ class ForagingCog(commands.Cog):
                 name="🏅 Level Up!",
                 value=(
                     f"You’re now **Foraging Level {old_lvl + 1}**\n"
-                    f"(+{bonus_inc} foraging bonus!)"
+                    f"🔋 +{bonus_inc} foraging bonus!\n"
+                    f"💪 +{bonus_inc} strength!"
                 ),
                 inline=False
             )

@@ -122,6 +122,11 @@ class FishingCog(commands.Cog):
                 {"$set": {"fishingLevel": old_lvl + 1, "fishingXP": leftover},
                  "$inc": {"fishingBonus": bonus_inc}}
             )
+
+            await db.general.update_one(
+                {"id": user_id},
+                {"$inc": {"accuracy": bonus_inc}}
+            )
         else:
             await db.skills.update_one({"id": user_id}, {"$set": {"fishingXP": new_xp}})
 
@@ -203,7 +208,8 @@ class FishingCog(commands.Cog):
                 name="🏅 Level Up!",
                 value=(
                     f"You’re now **Fishing Level {old_lvl + 1}**\n"
-                    f"(+{bonus_inc} fishing bonus!)"
+                    f"🔋 +{bonus_inc} fishing bonus!\n"
+                    f"🎯 +{bonus_inc} accuracy!"
                 ),
                 inline=False
             )

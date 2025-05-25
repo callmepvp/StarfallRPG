@@ -91,7 +91,7 @@ class FarmingCog(commands.Cog):
         lvl_threshold = 50 * old_lvl + 10
 
         leveled_up = False
-        bonus_increase = 2  # per-level bonus
+        bonus_increase = 5
         if new_xp >= lvl_threshold:
             leveled_up = True
             leftover = new_xp - lvl_threshold
@@ -166,7 +166,7 @@ class FarmingCog(commands.Cog):
                 name="🏅 Level Up!",
                 value=(
                     f"You’re now **Farming Level {old_lvl + 1}**\n"
-                    f"(+{bonus_increase} farming bonus!)"
+                    f"🔋 +{bonus_increase} farming bonus!"
                 ),
                 inline=False
             )

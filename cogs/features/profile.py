@@ -51,7 +51,7 @@ class ProfileCog(commands.Cog):
 
         # Skill levels
         skill_keys = ["foragingLevel","miningLevel","farmingLevel",
-                      "scavengingLevel","fishingLevel","craftingLevel"]
+                      "scavengingLevel","fishingLevel","craftingLevel", "combatLevel"]
         levels: List[int] = [ skl.get(k,0) for k in skill_keys ]
         avg_level = sum(levels)/len(levels) if levels else 0.0
 
@@ -59,6 +59,14 @@ class ProfileCog(commands.Cog):
             f"{k.replace('Level','').title()}: **{skl.get(k,0)}**"
             for k in skill_keys
         ) + f"\n\n**Average Level:** **{avg_level:.2f}**"
+
+        # Combat Stats
+        hp = gen.get("hp", 100)
+        max_hp = gen.get("maxHP", 100)
+        strength = gen.get("strength", 0)
+        defense = gen.get("defense", 0)
+        evasion = gen.get("evasion", 0)
+        accuracy = gen.get("accuracy", 0)
 
         # Build embed
         embed = discord.Embed(
@@ -72,9 +80,18 @@ class ProfileCog(commands.Cog):
         embed.add_field(name="💰 Wallet", value=f"{wallet:,} coins", inline=True)
         embed.add_field(name="💪 Current Stamina", value=f"{stamina}", inline=True)
         embed.add_field(name="🎒 Inventory Slots", value=f"{max_inv}", inline=True)
+
+        embed.add_field(name="❤️ HP", value=f"{hp}/{max_hp}", inline=True)
+        embed.add_field(name="💥 Strength", value=f"{strength}", inline=True)
+        embed.add_field(name="🛡️ Defense", value=f"{defense}", inline=True)
+        embed.add_field(name="🌀 Evasion", value=f"{evasion}", inline=True)
+        embed.add_field(name="🎯 Accuracy", value=f"{accuracy}", inline=True)
+        embed.add_field(name="\u200b", value="\u200b", inline=True)  # Spacer
+
         embed.add_field(name="✨ Essences", value="\n".join(essences), inline=False)
         embed.add_field(name="⚔️ Skill Levels", value=skills_display, inline=False)
 
+    
         embed.set_footer(text="Starfall RPG • profile")
 
         await interaction.response.send_message(embed=embed, ephemeral=False)

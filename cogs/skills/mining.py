@@ -84,6 +84,11 @@ class MiningCog(commands.Cog):
                 {"$set": {"miningLevel": old_lvl + 1, "miningXP": leftover},
                  "$inc": {"miningBonus": bonus}}
             )
+
+            await db.general.update_one(
+                {"id": user_id},
+                {"$inc": {"defense": bonus}}
+            )
         else:
             await db.skills.update_one({"id": user_id}, {"$set": {"miningXP": new_xp}})
 
@@ -125,7 +130,9 @@ class MiningCog(commands.Cog):
         if leveled:
             embed.add_field(
                 name="🏅 Level Up!",
-                value=f"You’re now **Mining Level {old_lvl + 1}** \n(+{bonus} mining bonus!)",
+                value=(f"You’re now **Mining Level {old_lvl + 1}**\n"
+                    f"🔋 +{bonus} mining bonus!\n"
+                    f"🛡️ +{bonus} defense!"),
                 inline=False
             )
         if coll_leveled:

@@ -104,6 +104,7 @@ class RegisterCog(commands.Cog):
                 "bio": "",
                 "maxInventory": 200,
                 "maxStamina": 200,
+                "maxHP": 100,
                 "wallet": 0,
                 "creation": now,
                 "stamina": 200,
@@ -115,6 +116,11 @@ class RegisterCog(commands.Cog):
                 "fishingEssence": 0,
                 "treasureChance": 1,
                 "trashChance": 50,
+                "hp": 100,
+                "strength": 1,
+                "defense": 1,
+                "evasion": 1,
+                "accuracy": 1
             })
             await db.areas.insert_one({
                 "id": user_id,
@@ -130,7 +136,7 @@ class RegisterCog(commands.Cog):
             })
             await db.skills.insert_one({
                 "id": user_id,
-                **{f"{sk}{prop}": 0 for sk in ("foraging","mining","farming","crafting","scavenging","fishing") for prop in ("Level","XP","Bonus")},
+                **{f"{sk}{prop}": 0 for sk in ("foraging","mining","farming","crafting","scavenging","fishing", "combat") for prop in ("Level","XP","Bonus")},
                 **{f"{sk}Tier": "1hand" for sk in ("mining","foraging","farming","scavenging","fishing")},
             })
             await db.collections.insert_one({

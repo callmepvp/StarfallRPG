@@ -84,6 +84,11 @@ class ScavengingCog(commands.Cog):
                 {"$set": {"scavengingLevel": old_lvl + 1, "scavengingXP": leftover},
                  "$inc": {"scavengingBonus": bonus}}
             )
+
+            await db.general.update_one(
+                {"id": user_id},
+                {"$inc": {"evasion": bonus}}
+            )
         else:
             await db.skills.update_one({"id": user_id}, {"$set": {"scavengingXP": new_xp}})
 
@@ -125,7 +130,11 @@ class ScavengingCog(commands.Cog):
         if leveled:
             embed.add_field(
                 name="🏅 Level Up!",
-                value=f"Your **Scavenging** is now **Level {old_lvl + 1}** \n(+{bonus} scavenging bonus!)",
+                value=(f"Your **Scavenging** is now **Level {old_lvl + 1}** \n" 
+                        f"🔋 +{bonus} scavenging bonus!\n"
+                        f"🎯 +{bonus} evasion!"
+
+                    ),
                 inline=False
             )
         if coll_leveled:
