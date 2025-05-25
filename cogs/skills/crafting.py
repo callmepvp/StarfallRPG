@@ -1,210 +1,188 @@
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
 import discord
-from discord.ui import Button, View, Select
 from discord import app_commands
 from discord.ext import commands
+from discord.ui import Select, View
 
-import typing
-import string
-from json import loads
-from pathlib import Path
+# Load manifests once at import time
+_ITEMS_PATH = Path("data/items.json")
+_RECIPES_PATH = Path("data/recipes/craftingRecipes.json")
 
-from pymongo import MongoClient
+_items_data: Dict[str, Any] = {}
+_recipes_data: Dict[str, List[Dict[str, str]]] = {}
 
-#Retrieve tokens & Initialize database
-data = loads(Path("data/config.json").read_text())
-craftingData = loads(Path("data/recipes/craftingRecipes.json").read_text())
-itemData = loads(Path("data/items.json").read_text())
-DATABASE_TOKEN = data['DATABASE_TOKEN']
+if _ITEMS_PATH.exists():
+    _items_data = json.loads(_ITEMS_PATH.read_text(encoding="utf-8")).get("items", {})
 
-cluster = MongoClient(DATABASE_TOKEN)
-general = cluster['alphaworks']['general']
-inventory = cluster['alphaworks']['inventory']
-recipes = cluster['alphaworks']['recipes']
-skills = cluster['alphaworks']['skills']
+if _RECIPES_PATH.exists():
+    _recipes_data = json.loads(_RECIPES_PATH.read_text(encoding="utf-8"))
 
-#Directory Grabbing Function
-def getDirectory(inputRecipe, userID, amount):
-    
-    #Check the recipe for special case items
-    """
-    Special case items Include:
-    Every Skill Essence -> <skill>Essence
-    anyFish -> Decorator for any allowed item of type "fish"
-    """
-    if inputRecipe in ["miningEssence", "farmingEssence", "scavengingEssence", "foragingEssence", "fishingEssence"]:
-        #Essences
-        return general, inputRecipe
-    
-    elif inputRecipe == "anyFish":
-        #Fish
-        #Generate the list of possible fish
-        possibleFish = []
-        for item in itemData:
-            if itemData[item][0]['type'] == 'fish':
-                possibleFish.append(item)
+class CraftingCog(commands.Cog):
+    """Handles `/craft` via arguments or a dropdown menu, with full DB integration."""
 
-        #Check the inventory for any fish
-        for fish in possibleFish:
-            if (inventory.find_one({'id' : userID, fish : {'$exists': True}}) is not None) and (inventory.find_one({'id' : userID})[fish] >= amount):
-                #There's enough fish in the inventory
-                return inventory, fish
-            else:
-                return inventory, "unableToCraft" #Return an exception reply
-            
-    else:
-        #Regular Resource
-        return inventory, inputRecipe
-
-class crafting(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
-        
-    #The actual crafting logic
-    async def craft(self, interaction: discord.Interaction, item: str, amount: int = 1, selectedOption = False):
-        if general.find_one({'id' : interaction.user.id})['stamina'] != 0: #Stamina Check
-            craftSuccess = False
 
-            #Try to fetch the input recipe
-            try:
-                recipe = craftingData[item][0]
-            except:
-                if selectedOption:
-                    await interaction.edit_original_response(content = "This is not a valid recipe.")
-                else:
-                    await interaction.response.send_message(ephemeral=True, content = "This is not a valid recipe.")
-                return
+    async def _perform_craft(
+        self,
+        interaction: discord.Interaction,
+        recipe_key: str,
+        amount: int
+    ) -> Tuple[bool, str, int]:
+        """
+        Attempt to craft `amount` × `recipe_key`.
+        Returns (success, message, xp_gain).
+        """
+        db = self.bot.db  # type: ignore[attr-defined]
+        user_id = interaction.user.id
 
-            if recipes.find_one({'id' : interaction.user.id, item : {'$exists': True}}) is not None: #If recipe exists
+        # 1) Verify user registered & stamina
+        profile = await db.general.find_one({"id": user_id})
+        if not profile:
+            return False, "❌ You need to `/register` first!", 0
+        if profile.get("stamina", 0) <= 0:
+            return False, "😴 Not enough stamina to craft right now.", 0
 
-                #Check resources
-                checkedRes = 0
-                for i in range(int(len(recipe)/2)):
-                    
-                    totalAmount = amount * int(recipe["r" + str(i)])
-                    dir, inputRecipe = getDirectory(recipe[str(i)], interaction.user.id, totalAmount)
+        # 2) Lookup recipe
+        recipe_list = _recipes_data.get(recipe_key.lower())
+        if not recipe_list:
+            return False, f"❌ No recipe for **{recipe_key}**.", 0
+        recipe = recipe_list[0]  # assume one definition
 
-                    #Check the item and quantities
-                    if dir.find_one({'id' : interaction.user.id, inputRecipe : {'$exists': True}}): #Check if the item exists
-                        if dir.find_one({'id' : interaction.user.id})[inputRecipe] >= amount * int(recipe["r" + str(i)]): #Check if there's enough of the item
-                            checkedRes += 1
+        # 3) Check and consume ingredients
+        needs: List[Tuple[str, int]] = []
+        for idx_str, item_name in ((k, v) for k, v in recipe.items() if not k.startswith("r")):
+            ridx = f"r{idx_str}"
+            req = int(recipe.get(ridx, "0")) * amount
+            needs.append((item_name, req))
 
-                        #All resources exist in enough quantities
-                        if checkedRes == int(len(recipe)/2):
-                            craftSuccess = True
-                            for j in range(checkedRes):
-                                
-                                totalAmount = amount * int(recipe["r" + str(i)])
-                                dir, inputRecipe = getDirectory(recipe[str(j)], interaction.user.id, totalAmount)
-                                
-                                #Remove materials
-                                if dir.find_one({'id' : interaction.user.id})[inputRecipe] - amount * int(recipe["r" + str(j)]) != 0:
-                                    dir.update_one({'id' : interaction.user.id}, {"$set":{inputRecipe : dir.find_one({'id' : interaction.user.id})[inputRecipe] - amount * int(recipe["r" + str(j)])}})
-                                else:
-                                    dir.update_one({'id' : interaction.user.id}, {'$unset' : {inputRecipe : ''}})
+        def resolve_ingredient(name: str):
+            if name == "anyFish":
+                async def finder():
+                    fish_keys = [k for k,i in _items_data.items() if i.get("type")=="fishing"]
+                    inv = await db.inventory.find_one({"id": user_id})
+                    for fk in fish_keys:
+                        if inv.get(fk,0) > 0:
+                            return fk
+                    return None
+                return "inventory", finder
+            elif name.endswith("Essence"):
+                return "general", name
+            else:
+                return "inventory", name
 
-                if not craftSuccess:
-                    if selectedOption:
-                        await interaction.edit_original_response(content=f"You don't have enough resources to craft **{amount}** x **{string.capwords(item)}**!")
-                    else:
-                        await interaction.response.send_message(ephemeral=True, content=f"You don't have enough resources to craft **{amount}** x **{string.capwords(item)}**!")
-                else:
+        for ing, req in needs:
+            loc, resolver = resolve_ingredient(ing)
+            if callable(resolver):
+                ing = await resolver()
+                if not ing:
+                    return False, f"❌ You have no fish to use for `{recipe_key}`.", 0
+            col = getattr(db, loc)
+            doc = await col.find_one({"id": user_id})
+            if doc.get(ing, 0) < req:
+                return False, f"❌ You lack **{req}** × **{ing.title()}**.", 0
 
-                    #Craft was successful => Give the item
-                    currentInventory = inventory.find_one({'id' : interaction.user.id, item : {'$exists' : True}})
-                    if currentInventory is None:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{item : amount}})
-                    else:
-                        inventory.update_one({'id' : interaction.user.id}, {"$set":{item : currentInventory[item] + amount}})
+        for ing, req in needs:
+            loc, resolver = resolve_ingredient(ing)
+            if callable(resolver):
+                ing = await resolver()
+            col = getattr(db, loc)
+            await col.update_one({"id": user_id}, {"$inc": {ing: -req}})
 
-                    message = []
-                    message.append(f":hammer_pick: You **Crafted**! You got **{amount}** x **{string.capwords(item)}**!")
+        # 4) Give the crafted item & reduce stamina
+        await db.inventory.update_one(
+            {"id": user_id}, {"$inc": {recipe_key: amount}}
+        )
+        await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
 
-                    #Calculate and give skill xp
-                    #Current formula -> Multplies used item amount with 1 * amount crafted
-                    #Should revamp this formula -> Maybe use the base xp of each item square rooted or divided * amount crafted
-                    existingXP = skills.find_one({'id' : interaction.user.id})['craftingXP']
-                    existingLevel = skills.find_one({'id' : interaction.user.id})['craftingLevel']
-                    existingBonus = skills.find_one({'id' : interaction.user.id})['craftingBonus']
-                    bonusAmount = 1 #Increase this skills bonus by this amount each level up
-                    xp = 1 * amount
-                    for w in range(int(len(recipe)/2)):
-                        xp = xp + int(recipe["r" + str(w)])
+        # 5) Compute XP = sum of all reqs
+        xp_gain = sum(req for _, req in needs)
 
-                    if existingXP + xp >= (50*existingLevel+10):
-                        leftoverXP = (existingXP + xp) - (50*existingLevel+10)
-                        if leftoverXP == 0:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'craftingXP' : 0, 'craftingLevel' : existingLevel + 1}})
-                        else:
-                            skills.update_one({'id' : interaction.user.id}, {"$set":{'craftingXP' : leftoverXP, 'craftingLevel' : existingLevel + 1}})
-
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'craftingBonus' : existingBonus + bonusAmount}})
-                        message.append('\n' f':star: You gained **{xp} Crafting** XP!' '\n' f'**[LEVEL UP]** Your **Crafting** leveled up! You are now **Crafting** level **{existingLevel + 1}**!' '\n' f'**[LEVEL BONUS]** **WIP** Bonus: **{existingBonus}** ⇒ **{existingBonus + bonusAmount}**')
-                    else:
-                        skills.update_one({'id' : interaction.user.id}, {"$set":{'craftingXP' : existingXP + xp}})
-                        message.append('\n' f':star: You gained **{xp} Crafting** XP!')
-
-                    if selectedOption:
-                        await interaction.edit_original_response(content=f"{''.join(message)}")
-                    else:
-                        await interaction.response.send_message(''.join(message))
+        # 6) Update crafting skill
+        sk = await db.skills.find_one({"id": user_id})
+        old_xp, old_lvl = sk["craftingXP"], sk["craftingLevel"]
+        new_xp = old_xp + xp_gain
+        lvl_thr = 50 * old_lvl + 10
+        leveled = False
+        bonus = 2
+        if new_xp >= lvl_thr:
+            leveled = True
+            leftover = new_xp - lvl_thr
+            await db.skills.update_one(
+                {"id": user_id},
+                {"$set": {"craftingLevel": old_lvl + 1, "craftingXP": leftover},
+                 "$inc": {"craftingBonus": bonus}}
+            )
         else:
-            await interaction.response.send_message(ephemeral=True, content="You don't have enough stamina!")
+            await db.skills.update_one(
+                {"id": user_id}, {"$set": {"craftingXP": new_xp}}
+            )
+
+        # 7) Build response
+        msg_lines = [
+            f"🛠️ You crafted **{amount}** × **{recipe_key.title()}**!",
+            f"⭐ Gained **{xp_gain}** Crafting XP!"
+        ]
+        if leveled:
+            msg_lines.append(f"🏅 Crafting Level Up! You’re now level **{old_lvl + 1}**!")
+        return True, "\n".join(msg_lines), xp_gain
 
     @app_commands.command(
-        name = "craft",
-        description = "Sticks and stones may break your bones.")
+        name="craft",
+        description="🔨 Craft items by name or pick from your known recipes."
+    )
+    @app_commands.describe(item="Recipe name", amount="Quantity to craft")
+    async def craft(
+        self,
+        interaction: discord.Interaction,
+        item: str = None,
+        amount: int = 1
+    ) -> None:
+        db = self.bot.db  # type: ignore[attr-defined]
+        user_id = interaction.user.id
 
-    async def crafting(self,interaction: discord.Interaction, item: str = None, amount: int = 1):
-        if general.find_one({'id' : interaction.user.id}) is not None:
+        prof = await db.general.find_one({"id": user_id})
+        if not prof:
+            return await interaction.response.send_message(
+                "❌ Please `/register` first.", ephemeral=True
+            )
 
-            if item != None: #If an exact recipe is specified
-                await self.craft(interaction, item, amount)
-            else:
-                #A specific recipe is not specified, send a dropdown menu
-                view = DropdownView(interaction.user.id, interaction, self)
-                await interaction.response.send_message("Your available crafting recipes:", view=view)
+        if item:
+            success, msg, _ = await self._perform_craft(interaction, item.lower(), amount)
+            await interaction.response.send_message(msg, ephemeral=not success)
         else:
-            await interaction.response.send_message(ephemeral=True, content="Please setup your account with `/register` before using this command.")
+            user_rec = await db.recipes.find_one({"id": user_id})
+            opts = [
+                discord.SelectOption(label=k.title())
+                for k in user_rec.keys() if k not in {"_id", "id"}
+            ]
+            if not opts:
+                return await interaction.response.send_message(
+                    "⚠️ You know no recipes yet!", ephemeral=True
+                )
+            view = View()
+            view.add_item(RecipeSelect(opts, self))
+            await interaction.response.send_message(
+                "Select a recipe to craft:", view=view, ephemeral=True
+            )
 
-class Dropdown(discord.ui.Select):
-    def __init__(self, user_id, interaction: discord.Interaction, mainClass: crafting):
-        super().__init__(placeholder="Choose a recipe!", min_values=1, max_values=1, options=self.get_options(user_id))     
-        self.id = user_id
-        self.interaction = interaction
-        self.mainClass = mainClass
-    
-    #Get the users available recipes
-    def get_options(self, user_id):
-        options = []
+class RecipeSelect(Select):
+    def __init__(self, options: List[discord.SelectOption], cog: CraftingCog):
+        super().__init__(
+            placeholder="Choose recipe...",
+            min_values=1, max_values=1,
+            options=options
+        )
+        self.cog = cog
 
-        data = recipes.find_one({'id' : int(user_id)})
-        for item in data.items():
-            if item[0] != '_id':
-                if item[0] != 'id':
-                    options.append(discord.SelectOption(label=f"{item[0]}", emoji="🥢"))
-
-        return options
-
-    #Sends the response message, when an option is selected
-    async def callback(self, interaction: discord.Interaction):
-        selectedOption = True #Necessary because the code can't differentiate between a straight input and a list-chosen 
-        await self.interaction.edit_original_response(content=f"You chose **{string.capwords(self.values[0])}**!", view=None)
-        await self.mainClass.craft(self.interaction, self.values[0], 1, selectedOption)
-    
-    #Check if the right user is editing the dropdown
-    async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        return self.interaction.user.id == self.id
-    
-    #Reset the dropdown menu
-    async def on_timeout(self) -> None:
-        await self.interaction.edit_original_response(content="Request Timed Out!", view=None)
-
-class DropdownView(discord.ui.View):
-    def __init__(self, user_id, interaction: discord.Interaction, mainClass: crafting):
-        super().__init__()
-        self.add_item(Dropdown(user_id, interaction, mainClass))
+    async def callback(self, interaction: discord.Interaction) -> None:
+        choice = self.values[0].lower()
+        success, msg, _ = await self.cog._perform_craft(interaction, choice, 1)
+        await interaction.response.edit_message(content=msg, view=None)
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(
-        crafting(bot),
-        guilds = [discord.Object(id = 1047945458665914388)])
+    from settings import GUILD_ID
+    await bot.add_cog(CraftingCog(bot), guilds=[discord.Object(id=GUILD_ID)])
