@@ -1,159 +1,154 @@
-import discord
-from discord.ui import Button, View
-from discord import app_commands
-from discord.ext import commands
-
-import asyncio
 import datetime
 import time
-from json import loads
-from pathlib import Path
+from typing import Optional
 
-from pymongo import MongoClient
+import discord
+from discord import app_commands
+from discord.ext import commands
+from discord.ui import Button, Modal, TextInput, View
 
-#Retrieve tokens & Initialize database
-data = loads(Path("data/config.json").read_text())
-DATABASE_TOKEN = data['DATABASE_TOKEN']
+from database import Database
+from settings import GUILD_ID
 
-cluster = MongoClient(DATABASE_TOKEN)
-general = cluster['alphaworks']['general']
-inventory = cluster['alphaworks']['inventory']
-skills = cluster['alphaworks']['skills']
-collections = cluster['alphaworks']['collections']
-recipes = cluster['alphaworks']['recipes']
-areas = cluster['alphaworks']['areas']
+class CharacterCustomizationModal(Modal):
+    """Modal for choosing your character’s display name and brief bio."""
+    name = TextInput(
+        label="Your Character’s Name",
+        placeholder="Enter the name you'll be known by in Starfall",
+        max_length=32,
+    )
+    bio = TextInput(
+        label="Short Bio",
+        style=discord.TextStyle.paragraph,
+        placeholder="Describe yourself in one sentence",
+        required=False,
+        max_length=100,
+    )
 
-class register(commands.Cog):
+    def __init__(self, user_id: int, db: "Database"):
+        super().__init__(title="Customize Your Avatar")
+        self.user_id = user_id
+        self.db = db
+
+    async def on_submit(self, interaction: discord.Interaction) -> None:
+        """Save the custom name and bio, then confirm registration."""
+        # Update the general document with the chosen name & bio
+        await self.db.general.update_one(
+            {"id": self.user_id},
+            {"$set": {"name": self.name.value, "bio": self.bio.value}},
+        )
+
+        embed = discord.Embed(
+            title="Registration Complete!",
+            description=(
+                f"Welcome, **{self.name.value}**!\n"
+                "You’ve been fully registered and can now explore Starfall."
+            ),
+            color=discord.Color.green(),
+            timestamp=datetime.datetime.now(),
+        )
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+
+class RegisterCog(commands.Cog):
+    """Handles the `/register` command and new-user onboarding."""
+
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @app_commands.command(
-        name = "register",
-        description = "Setup your profile!")
+        name="register",
+        description="Setup your Starfall profile and get started!"
+    )
+    async def register(self, interaction: discord.Interaction) -> None:
+        """
+        1) Checks if the user already has a profile.
+        2) Shows the Terms & Conditions embed with a confirmation button.
+        3) On confirmation, seeds all MongoDB collections for that user.
+        4) Launches a Modal to collect name & bio.
+        """
+        user_id = interaction.user.id
+        db = self.bot.db
 
-    async def register(self,interaction: discord.Interaction):
-        if general.find_one({'id' : interaction.user.id}) is None:
-        
-            embed = discord.Embed(title = f"Welcome to Alphaworks, {interaction.user.display_name}!", 
-                                description = "*Before proceeding, please read this thoroughly!* \n\n **[1]** Do not abuse exploits or bugs of any kind. \n **[2]** Use only one account per person. \n\n:information_source: Starfall RPG processes some of your data such as username, ID and profile picture.", 
-                                color = discord.Color.random(), 
-                                timestamp = datetime.datetime.now())
-            
-            button = Button(label = "I understand.", style = discord.ButtonStyle.gray, emoji = "👌")
-            async def button_callback(interaction: discord.Interaction):
-                button.style = discord.ButtonStyle.green
+        # Step 1: refuse if already registered
+        existing = await db.general.find_one({"id": user_id})
+        if existing:
+            return await interaction.response.send_message(
+                "You already have an account! If this is an error, contact the dev.",
+                ephemeral=True,
+            )
 
-                #Setup the profile and inventory on MongoDB
-                inventory.insert_one({'id' : interaction.user.id})
+        # Step 2: Terms & Conditions
+        terms = (
+            "**Before proceeding, please read carefully!**\n\n"
+            "1. Do not exploit bugs or use multiple accounts.\n"
+            "2. Your Discord username, ID, and avatar will be stored for gameplay.\n"
+        )
+        embed = discord.Embed(
+            title=f"Welcome to Starfall, {interaction.user.display_name}!",
+            description=terms,
+            color=discord.Color.blurple(),
+            timestamp=datetime.datetime.now(),
+        )
+        embed.set_footer(text="Click “I understand” to continue.")
 
-                #Holds the data for all general stats on setup
-                generalData = {
-                    'id' : interaction.user.id,
-                    'name' : interaction.user.display_name,
-                    'wallet' : 0,
-                    'creation' : time.time(),
-                    'stamina' : 200, 'crates' : [0, 0, 0, 0], #* the crates list will hold the NUMBER of crates of each type in ascending rarity: common -> legendary
-                    'miningEssence' : 0, 'foragingEssence' : 0, 'farmingEssence' : 0, 'scavengingEssence' : 0, 'fishingEssence' : 0, #Skill Essences
-                    'treasureChance' : 1, 'trashChance' : 50 #Necessary fishing stats
-                }
+        button = Button(label="I understand", style=discord.ButtonStyle.gray)
+        async def on_accept(button_inter: discord.Interaction) -> None:
+            button.disabled = True
 
-                general.insert_one(generalData)
-                
-                #Currently holds no use except for fishing (will be used later) (Might randomize starting location later)
-                areaData = {
-                    'id' : interaction.user.id,
-                    'currentArea' : 'plains',
-                    'currentSubarea' : 'sunken lagoon', #Default spawning locations for every new player
-                    'subareaType' : 'small', #Extra arguments for subareas, if needed
-                    
-                    #these hold the arrays for all available items for harvest for the player (to save computing time)
-                    'availableSc' : [],
-                    'availableFa' : [],
-                    'availableFiFishing' : [],
-                    'availableFiTrash' : [],
-                    'availableFo' : [],
-                    'availableMi' : []
-                }
+            # Step 3: seed all collections
+            now = time.time()
+            await db.inventory.insert_one({"id": user_id})
+            await db.general.insert_one({
+                "id": user_id,
+                "name": interaction.user.display_name,
+                "wallet": 0,
+                "creation": now,
+                "stamina": 200,
+                "crates": [0, 0, 0, 0],
+                "miningEssence": 0,
+                "foragingEssence": 0,
+                "farmingEssence": 0,
+                "scavengingEssence": 0,
+                "fishingEssence": 0,
+                "treasureChance": 1,
+                "trashChance": 50,
+            })
+            await db.areas.insert_one({
+                "id": user_id,
+                "currentArea": "plains",
+                "currentSubarea": "sunken lagoon",
+                "subareaType": "small",
+                "availableSc": [],
+                "availableFa": [],
+                "availableFiFishing": [],
+                "availableFiTrash": [],
+                "availableFo": [],
+                "availableMi": [],
+            })
+            await db.skills.insert_one({
+                "id": user_id,
+                **{f"{sk}{prop}": 0 for sk in ("foraging","mining","farming","crafting","scavenging","fishing") for prop in ("Level","XP","Bonus")},
+                **{f"{sk}Tier": "1hand" for sk in ("mining","foraging","farming","scavenging","fishing")},
+            })
+            await db.collections.insert_one({
+                "id": user_id,
+                "wood": 0, "woodLevel": 0,
+                "ore": 0, "oreLevel": 0,
+                "crop": 0, "cropLevel": 0,
+                "herb": 0, "herbLevel": 0,
+                "fish": 0, "fishLevel": 0,
+            })
+            await db.recipes.insert_one({"id": user_id, "toolrod": True})
 
-                areas.insert_one(areaData)
-
-                #Holds the level, xp and bonus data for every skill => level and xp could be removed in the future & replaced with a total xp stat, which would calculate level on each command
-                skillData = {
-                    'id' : interaction.user.id,
-                    'foragingLevel' : 0, 'foragingXP' : 0, 'foragingBonus' : 0,
-                    'miningLevel' : 0, 'miningXP' : 0, 'miningBonus' : 0,
-                    'farmingLevel' : 0, 'farmingXP' : 0, 'farmingBonus' : 0,
-                    'craftingLevel' : 0, 'craftingXP' : 0, 'craftingBonus' : 0,
-                    'scavengingLevel' : 0, 'scavengingXP' : 0, 'scavengingBonus' : 0,
-                    'fishingLevel' : 0, 'fishingXP' : 0, 'fishingBonus' : 0,
-                    'miningTier' : '1hand', 'foragingTier' : '1hand', 'farmingTier' : '1hand', 'scavengingTier' : '1hand', 'fishingTier' : '1hand' #2 Unique values per tier: hand and 1hand (1hand if function isnt ran yet)
-                }
-                
-                skills.insert_one(skillData)
-
-                #Holds the data for the main collections ; These will most likely get a significant overhaul in the future
-                collectionsData = {
-                    'id' : interaction.user.id,
-                    'wood' : 0, 'woodLevel' : 0,
-                    'ore' : 0, 'oreLevel' : 0,
-                    'crop' : 0, 'cropLevel' : 0,
-                    'herb' : 0, 'herbLevel' : 0,
-                    'fish' : 0, 'fishLevel' : 0
-                }
-
-                collections.insert_one(collectionsData)
-
-                #Holds the data for all recipes that are given on setup, recipe data is saved as booleans
-                recipeData = {
-                    'id' : interaction.user.id,
-                    'toolrod' : True
-                }
-
-                recipes.insert_one(recipeData)
-
-                #Character Customization 1/x
-                embed = discord.Embed(title = f"Choose Your Name, {interaction.user.display_name}! **(1/2)**", 
-                                    description = "",
-                                    color = discord.Color.random(), 
-                                    timestamp = datetime.datetime.now())
-                embed.set_footer(text="*Some quote here...*")
-                            
-                embed.add_field(name="Race", value="`TEST_RACE`", inline=False)
-                embed.add_field(name="Race Bonus", value="`BONUS_1`", inline=True)
-                embed.add_field(name="Race Bonus", value="`BONUS_2`", inline=True)
-                embed.add_field(name="Lineage", value="`TEST_LINEAGE`", inline=False)
-                embed.add_field(name="Area", value="`TEST_AREA`", inline=True) #Plains, Desert etc.
-                embed.add_field(name="Sub-Region", value="`TEST_REGION`", inline=True) #Sunken Lagoon etc.
-
-                embed.add_field(name="Name", value="**Who knows?**", inline=False)
-
-                await interaction.response.edit_message(embed = embed, view = None)
-
-                try: 
-                    answer = await self.bot.wait_for("message", check=lambda m: m.author.id == interaction.user.id and m.channel.id == interaction.channel_id, timeout=120.0)
-
-                    #Character Customization 2/x
-                    #Check if the given name is compatible and appropriate
-                    embed.title = f"Customize Your Avatar, {answer.content}! **(2/2)**"
-                    embed.clear_fields()
-                    embed.set_image(url="https://i.ibb.co/QY3x3Vb/background.gif")
-
-                    await answer.delete()
-                    await interaction.edit_original_response(embed = embed)
-                except asyncio.TimeoutError:
-                    await interaction.edit_original_response(embed = None, view = None, content = "The registering process **timed out**. You have to **retry**.")
-
-            button.callback = button_callback
-
-            view = View()
-            view.add_item(button)
-
-            await interaction.response.send_message(ephemeral = True, embed = embed, view = view)
-
-        else:
-            await interaction.response.send_message(ephemeral=True, content="Sorry, you already have an account setup. If you feel that this is an error, please contact me personally. [`pvp#7272`]")
     
+            modal = CharacterCustomizationModal(user_id, db)
+            await button_inter.response.send_modal(modal)
+
+        button.callback = on_accept
+        view = View(timeout=120.0)
+        view.add_item(button)
+
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(
-        register(bot),
-        guilds = [discord.Object(id = 1047945458665914388)])
+    await bot.add_cog(RegisterCog(bot), guilds=[discord.Object(id=GUILD_ID)])

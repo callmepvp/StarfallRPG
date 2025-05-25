@@ -1,15 +1,62 @@
-config.json
-cogs/__pycache__/play.cpython-311.pyc
-cogs/__pycache__/setup.cpython-311.pyc
-cogs/__pycache__/test.cpython-311.pyc
-cogs/__pycache__/register.cpython-311.pyc
-cogs/skills/__pycache__/foraging.cpython-311.pyc
-cogs/skills/__pycache__/mining.cpython-311.pyc
-cogs/skills/__pycache__/farming.cpython-311.pyc
-cogs/skills/__pycache__/crafting.cpython-311.pyc
-cogs/__pycache__/debug.cpython-311.pyc
-cogs/skills/__pycache__/scavenging.cpython-311.pyc
-cogs/skills/__pycache__/fishing.cpython-311.pyc
-__pycache__/index.cpython-311.pyc
-.vscode
-*.pyc
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+.env/
+.env.*
+
+# VS Code settings
+.vscode/
+
+# macOS and system files
+.DS_Store
+Thumbs.db
+
+# Logs and caches
+*.log
+*.sqlite3
+*.db
+.cache/
+*.pid
+
+# Python egg info
+*.egg-info/
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Ignore configuration & secrets
+data/config.json
+data/*.secret
+*.pem
+*.key
+
+# Compiled binaries / temporary files
+*.so
+*.dll
+*.exe
+*.out
+*.o
+
+# Ignore recipes and generated data if needed
+data/recipes/__pycache__/
+data/recipes/*.pyc
+data/*.bak
+data/*.tmp
+
+# Ignore backups or debug files
+*.bak
+*.swp
+*.swo
+*.tmp
+
+# __init__.py cache and unnecessary files
+**/__pycache__/
+
+# MongoDB dump files
+dump/
