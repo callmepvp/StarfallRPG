@@ -1,0 +1,22 @@
+import time
+from typing import Dict
+
+def regenerate_stamina(user_data: Dict) -> Dict:
+    """Regenerates stamina based on time elapsed."""
+    now = time.time()
+    max_stamina = user_data.get("maxStamina", 200)
+    current_stamina = user_data.get("stamina", 0)
+    last_update = user_data.get("lastStaminaUpdate", now)
+
+    # 1 stamina every 5 minutes = 300 seconds
+    elapsed = now - last_update
+    regen_amount = int(elapsed // 300)
+
+    if regen_amount > 0 and current_stamina < max_stamina:
+        new_stamina = min(current_stamina + regen_amount, max_stamina)
+        user_data["stamina"] = new_stamina
+        user_data["lastStaminaUpdate"] = now  # reset timer
+    elif current_stamina >= max_stamina:
+        user_data["lastStaminaUpdate"] = now  # don't stack regeneration
+
+    return user_data

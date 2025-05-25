@@ -144,7 +144,7 @@ class CombatCog(commands.Cog):
                 mob_hit_chance = mob["stats"]["acc"] / (mob["stats"]["acc"] + player_stats["eva"])
                 if random.random() <= mob_hit_chance:
                     mob_damage = max(1, mob["stats"]["str"] - player_stats["def"] // 2)
-                    player_hp -= mob_damage
+                    player_hp = max(0, player_hp - mob_damage)
                     combat_log.append(f"🩸 {mob['name']} hits you for **{mob_damage}** damage!")
 
         victory = player_hp > 0
@@ -153,15 +153,12 @@ class CombatCog(commands.Cog):
         base_xp = mob["xp"]
         xp_gain = base_xp if victory else int(base_xp * 0.2)
         levels_gained, new_level, leveled_up = await self._handle_combat_level_up(user_id, xp_gain)
-        
+
         # Update player state
         updates = {
             "$inc": {"stamina": -1},
             "$set": {
-                "hp": min(
-                    player_hp, 
-                    player_stats["max_hp"]
-                )
+                "hp": max(0, min(player_hp, player_stats["max_hp"]))
             }
         }
         
@@ -180,7 +177,13 @@ class CombatCog(commands.Cog):
                     )
         else:
             gold_loss = min(profile["wallet"], random.randint(10, 25))
-            updates["$inc"]["wallet"] = -gold_loss
+            stamina_loss = random.randint(10, 25)
+            new_stamina = max(0, profile["stamina"] - stamina_loss)
+
+            await db.general.update_one({"id": user_id}, {
+                "$inc": {"wallet": -gold_loss},
+                "$set": {"stamina": new_stamina}
+            })
 
         await db.general.update_one({"id": user_id}, updates)
 
@@ -189,8 +192,8 @@ class CombatCog(commands.Cog):
             f"**{'VICTORY! 🏆' if victory else 'DEFEAT! ☠️'}**",
             f"• XP Gained: ⭐ {xp_gain}{' (Partial)' if not victory else ''}",
             f"• {'Gold Earned' if victory else 'Lost Gold'}: 🪙 {gold_gain if victory else gold_loss}",
+            f"• {'Stamina Lost' if not victory else 'Stamina Left'}: ⚡ {profile['stamina']-1 if victory else stamina_loss}",
             f"• Remaining HP: ❤️ {min(player_hp, player_stats['max_hp'] + levels_gained*5)}/{player_stats['max_hp'] + levels_gained*5}",
-            f"• Stamina Left: ⚡ {profile['stamina']-1}"
         ]
 
         embed = discord.Embed(

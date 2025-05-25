@@ -104,6 +104,7 @@ class RegisterCog(commands.Cog):
                 "bio": "",
                 "maxInventory": 200,
                 "maxStamina": 200,
+                "lastStaminaUpdate": now,
                 "maxHP": 100,
                 "wallet": 0,
                 "creation": now,

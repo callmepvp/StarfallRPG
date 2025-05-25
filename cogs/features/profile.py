@@ -5,11 +5,30 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
+from server.userMethods import regenerate_stamina
+
 class ProfileCog(commands.Cog):
     """Displays detailed player profile info via `/profile`."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
+
+    async def get_regen_user(self, user_id: int) -> Dict | None:
+        db = self.bot.db
+        user = await db.general.find_one({"id": user_id})
+        if user is None:
+            return None
+
+        user = regenerate_stamina(user)
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {
+                "stamina": user["stamina"],
+                "lastStaminaUpdate": user["lastStaminaUpdate"]
+            }}
+        )
+        return user
+
 
     @app_commands.command(
         name="profile",
@@ -20,7 +39,7 @@ class ProfileCog(commands.Cog):
         user_id = interaction.user.id
 
         # Fetch data
-        gen = await db.general.find_one({"id": user_id})
+        gen = await self.get_regen_user(user_id)
         skl = await db.skills.find_one({"id": user_id})
         if not gen or not skl:
             return await interaction.response.send_message(
