@@ -1,5 +1,6 @@
 import datetime
 import random
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -13,12 +14,15 @@ from server.userMethods import regenerate_stamina, calculate_power_rating
 _ITEMS_PATH = Path("data/items.json")
 _items_data: Dict[str, Any] = {}
 if _ITEMS_PATH.exists():
-    import json
     _items_data = json.loads(_ITEMS_PATH.read_text(encoding="utf-8")).get("items", {})
 
+# Load areas data
+_AREAS_PATH = Path("data/areas.json")
+_areas_data: Dict[str, Any] = {}
+if _AREAS_PATH.exists():
+    _areas_data = json.loads(_AREAS_PATH.read_text(encoding="utf-8"))
 
 def _get_items_by_type(item_type: str) -> List[Tuple[str, Dict[str, Any]]]:
-    """Return list of (key, info) filtered by info['type']==item_type."""
     return [
         (k, info)
         for k, info in _items_data.items()
@@ -37,9 +41,8 @@ class FishingCog(commands.Cog):
     async def get_regen_user(self, user_id: int) -> Dict | None:
         db = self.bot.db
         user = await db.general.find_one({"id": user_id})
-        if user is None:
+        if not user:
             return None
-
         user = regenerate_stamina(user)
         power = calculate_power_rating(user)
         user["powerRating"] = power
@@ -74,20 +77,55 @@ class FishingCog(commands.Cog):
                 ephemeral=True
             )
 
-        # 2) Load thresholds
+        # 2) Fetch current subarea
+        area_doc = await db.areas.find_one({"id": user_id})
+        if not area_doc:
+            return await interaction.response.send_message(
+                "❌ Couldn’t determine your current location!", ephemeral=True
+            )
+
+        player_area = area_doc.get("currentArea")
+        player_sub = area_doc.get("currentSubarea")
+        if not player_area or not player_sub:
+            return await interaction.response.send_message(
+                "❌ You’re not in a valid location!", ephemeral=True
+            )
+
+        area_info = _areas_data.get(player_area, {})
+        subarea_info = area_info.get("sub_areas", {}).get(player_sub, {})
+        if not subarea_info:
+            return await interaction.response.send_message(
+                "❌ Invalid subarea data!", ephemeral=True
+            )
+
+        # 3) Build available lists from subarea resources
+        resources = subarea_info.get("resources", [])
+        available_fish = [
+            (k, info) for k, info in self._fish_items
+            if k in resources
+        ]
+        available_trash = [
+            (k, info) for k, info in self._trash_items
+            if k in resources
+        ]
+
+        if not available_fish and not available_trash:
+            return await interaction.response.send_message(
+                "🎣 There’s nothing to catch in this subarea.", ephemeral=True
+            )
+
+        # 4) Load thresholds and roll
         treasure_chance = profile.get("treasureChance", 0)
         trash_chance = profile.get("trashChance", 100)
-
-        # 3) Roll outcome
         roll = random.randint(1, 100)
+
         kind: str
         key: str
         qty: int
         xp_gain: int
-        essence_gain: float
 
         if roll <= treasure_chance:
-            # Treasure: either coins or crate
+            # Treasure: coins or crate
             if random.choice([True, False]):
                 kind = "coins"
                 qty = random.randint(10, 500)
@@ -97,44 +135,47 @@ class FishingCog(commands.Cog):
                 key = random.choice(self._crate_rarities)
                 qty = 1
                 xp_gain = 4
-        elif roll <= trash_chance:
-            # Trash catch
-            selection = random.choices(
-                [k for k, _ in self._trash_items],
-                weights=[info.get("weight", 10) for _, info in self._trash_items],
-                k=1
-            )[0]
+
+        elif roll <= trash_chance and available_trash:
             kind = "trash"
-            key = selection
-            qty = random.randint(1, 2)
-            xp_gain = _items_data[key].get("xp", 1) * qty
-        else:
-            # Fish catch
-            selection = random.choices(
-                [k for k, _ in self._fish_items],
-                weights=[info.get("weight", 10) for _, info in self._fish_items],
+            key, info = random.choices(
+                [(k, i) for k, i in available_trash],
+                weights=[i.get("weight", 10) for _, i in available_trash],
                 k=1
             )[0]
-            kind = "fish"
-            key = selection
             qty = random.randint(1, 2)
-            xp_gain = _items_data[key].get("xp", 1) * qty
+            xp_gain = info.get("xp", 1) * qty
+
+        else:
+            # Fish catch (fall back to fish if no trash)
+            if not available_fish:
+                # if no fish, treat as trash zone
+                kind = "trash"
+                key, info = random.choice(available_trash)
+                qty = random.randint(1, 2)
+                xp_gain = info.get("xp", 1) * qty
+            else:
+                kind = "fish"
+                key, info = random.choices(
+                    [(k, i) for k, i in available_fish],
+                    weights=[i.get("weight", 10) for _, i in available_fish],
+                    k=1
+                )[0]
+                qty = random.randint(1, 2)
+                xp_gain = info.get("xp", 1) * qty
 
         essence_gain = round(xp_gain * 0.35, 2)
 
-        # 4) Apply stamina cost
+        # 5) Deduct stamina
         await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
 
-        leveled_fish = False
-        leveled_coll = False
-
-        # 5) Handle XP, Essence, and level-ups for Fishing skill
+        # 6) Skill XP + level-up
         sk = await db.skills.find_one({"id": user_id})
         old_xp, old_lvl = sk["fishingXP"], sk["fishingLevel"]
         new_xp = old_xp + xp_gain
         lvl_thr = 50 * old_lvl + 10
+        leveled_fish = False
         bonus_inc = 2
-
         if new_xp >= lvl_thr:
             leveled_fish = True
             leftover = new_xp - lvl_thr
@@ -143,71 +184,47 @@ class FishingCog(commands.Cog):
                 {"$set": {"fishingLevel": old_lvl + 1, "fishingXP": leftover},
                  "$inc": {"fishingBonus": bonus_inc}}
             )
-
-            await db.general.update_one(
-                {"id": user_id},
-                {"$inc": {"accuracy": bonus_inc}}
-            )
+            await db.general.update_one({"id": user_id}, {"$inc": {"accuracy": bonus_inc}})
         else:
             await db.skills.update_one({"id": user_id}, {"$set": {"fishingXP": new_xp}})
+        await db.general.update_one({"id": user_id}, {"$inc": {"fishingEssence": essence_gain}})
 
-        await db.general.update_one(
-            {"id": user_id}, {"$inc": {"fishingEssence": essence_gain}}
-        )
-
-        # 6) Handle catch-specific updates
-        wallet_inc = 0
-        crate_inc = 0
+        # 7) Handle loot/inventory/wallet
+        wallet_inc = crate_inc = 0
         if kind == "coins":
             wallet_inc = qty
-            await db.general.update_one(
-                {"id": user_id}, {"$inc": {"wallet": wallet_inc}}
-            )
+            await db.general.update_one({"id": user_id}, {"$inc": {"wallet": wallet_inc}})
         elif kind == "crate":
             crate_inc = qty
-            # find position
             idx = self._crate_rarities.index(key)
             await db.general.update_one(
                 {"id": user_id},
                 {"$inc": {f"crates.{idx}": crate_inc}}
             )
         else:
-            # inventory + collection
             await db.inventory.update_one({"id": user_id}, {"$inc": {key: qty}})
             coll = await db.collections.find_one({"id": user_id})
             old_c, old_cl = coll["fish"], coll["fishLevel"]
             new_c = old_c + qty
             coll_thr = 50 * old_cl + 50
             if new_c >= coll_thr:
-                leveled_coll = True
                 await db.collections.update_one(
                     {"id": user_id},
                     {"$set": {"fish": new_c, "fishLevel": old_cl + 1}}
                 )
             else:
-                await db.collections.update_one(
-                    {"id": user_id}, {"$set": {"fish": new_c}}
-                )
+                await db.collections.update_one({"id": user_id}, {"$set": {"fish": new_c}})
 
-        # 7) Build the embed response
+        # 8) Build embed
         embed = discord.Embed(
             title="🎣 Fishing Results",
             color=discord.Color.teal(),
             timestamp=datetime.datetime.now()
         )
-        # Description of catch
         if kind == "coins":
-            embed.add_field(
-                name="💰 Treasure!",
-                value=f"You reeled in **{wallet_inc:,} coins**",
-                inline=False
-            )
+            embed.add_field(name="💰 Treasure!", value=f"You reeled in **{wallet_inc:,} coins**", inline=False)
         elif kind == "crate":
-            embed.add_field(
-                name="📦 Crate!",
-                value=f"You got a **{key.title()}**",
-                inline=False
-            )
+            embed.add_field(name="📦 Crate!", value=f"You got a **{key.title()}**", inline=False)
         else:
             embed.add_field(
                 name="🐟 Catch!",
@@ -215,14 +232,9 @@ class FishingCog(commands.Cog):
                 inline=False
             )
 
-        # Common fields
         embed.add_field(name="Fishing XP", value=f"⭐ {xp_gain:,} XP", inline=True)
         embed.add_field(name="Fishing Essence", value=f"✨ {essence_gain}", inline=True)
-        embed.add_field(
-            name="Stamina Remaining",
-            value=f"💪 {profile['stamina'] - 1}",
-            inline=False
-        )
+        embed.add_field(name="⚡ Stamina Remaining", value=f"{profile['stamina'] - 1}", inline=False)
 
         if leveled_fish:
             embed.add_field(
@@ -231,14 +243,7 @@ class FishingCog(commands.Cog):
                     f"You’re now **Fishing Level {old_lvl + 1}**\n"
                     f"🔋 +{bonus_inc} fishing bonus!\n"
                     f"🎯 +{bonus_inc} accuracy!"
-                ),
-                inline=False
-            )
-        if leveled_coll:
-            embed.add_field(
-                name="📚 Collection Level!",
-                value=f"Your **Fish Collection** is now **Level {old_cl + 1}**",
-                inline=False
+                ), inline=False
             )
 
         await interaction.response.send_message(embed=embed)

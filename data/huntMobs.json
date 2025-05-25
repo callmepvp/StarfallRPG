@@ -16,7 +16,6 @@
         {"item": "stone", "chance": 0.7, "quantity": [1,3]},
         {"item": "coal", "chance": 0.3, "quantity": [1,2]}
       ],
-      "spawn_areas": ["plains"],
       "respawn_time": 300,
       "behavior": "aggressive",
       "weakness": ["fire", "lightning"]
@@ -37,7 +36,6 @@
         {"item": "animal_bone", "chance": 0.8, "quantity": [1,2]},
         {"item": "coyote_fang", "chance": 0.25}
       ],
-      "spawn_areas": ["plains"],
       "respawn_time": 240,
       "behavior": "skittish",
       "weakness": ["piercing"]
@@ -58,7 +56,6 @@
         {"item": "boar_leather", "chance": 0.7},
         {"item": "boar_tusk", "chance": 0.4, "quantity": [1,2]}
       ],
-      "spawn_areas": ["plains"],
       "respawn_time": 360,
       "behavior": "charging",
       "special_ability": "mud_armor"

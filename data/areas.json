@@ -1,0 +1,83 @@
+{
+  "plains": {
+    "name": "Plains",
+    "rarity": "common",
+    "lore": "The Plains are vast open grasslands dotted with small villages and ponds, home to many wandering creatures and travelers.",
+    "image": "url_to_plains_image",
+
+    "sub_areas": {
+      "pond": {
+        "name": "Pond",
+        "type": "small",
+        "lore": "A quiet pond surrounded by reeds and wildflowers, a peaceful spot teeming with fish and small animals.",
+        "image": "url_to_pond_image",
+        "mobs": [],
+        "resources": ["rubber duck", "boot", "seaweed", "perch", "cod", "trout", "oak"],
+        "connections": ["village_1", "meadow"]
+      },
+      "village_1": {
+        "name": "Village 1",
+        "type": "small",
+        "lore": "A humble village where travelers rest and villagers live simple lives.",
+        "image": "url_to_village_1_image",
+        "mobs": [],
+        "resources": ["oak", "stone", "coal", "wheat", "carrot"],
+        "connections": ["pond", "well", "meadow"]
+      },
+      "meadow": {
+        "name": "Meadow",
+        "type": "medium",
+        "lore": "A large meadow full of wildflowers and roaming wildlife.",
+        "image": "url_to_meadow_image",
+        "mobs": ["plains_coyote", "mudback_boar"],
+        "resources": ["oak", "silverleaf", "needlegrass", "stone", "coal"],
+        "connections": ["pond", "village_1", "village_2"]
+      },
+      "well": {
+        "name": "Well",
+        "type": "small",
+        "lore": "An old stone well providing fresh water to nearby villages.",
+        "image": "url_to_well_image",
+        "mobs": [],
+        "resources": [],
+        "connections": ["village_1", "church"]
+      },
+      "church": {
+        "name": "Church",
+        "type": "medium",
+        "lore": "A stone church with stained glass windows, a place of worship and community.",
+        "image": "url_to_church_image",
+        "mobs": [],
+        "resources": [],
+        "connections": ["well", "village_2"]
+      },
+      "village_2": {
+        "name": "Village 2",
+        "type": "large",
+        "lore": "A larger, bustling village with markets and a cathedral at its center.",
+        "image": "url_to_village_2_image",
+        "mobs": [],
+        "resources": ["oak", "stone", "coal", "wheat", "carrot"],
+        "connections": ["meadow", "church", "cathedral", "market"]
+      },
+      "cathedral": {
+        "name": "Cathedral",
+        "type": "large",
+        "lore": "A grand cathedral towering over the village, filled with history and reverence.",
+        "image": "url_to_cathedral_image",
+        "mobs": [],
+        "resources": [],
+        "connections": ["village_2", "market"]
+      },
+      "market": {
+        "name": "Market",
+        "type": "medium",
+        "lore": "A busy marketplace where traders and villagers exchange goods.",
+        "image": "url_to_market_image",
+        "mobs": [],
+        "resources": [],
+        "connections": ["village_2", "cathedral"]
+      }
+    }
+  }
+}

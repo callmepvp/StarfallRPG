@@ -1,5 +1,3 @@
-# cogs/misc.py
-
 import os
 import sys
 import platform
@@ -73,7 +71,6 @@ class InfoCog(commands.Cog):
             icon_url=interaction.user.display_avatar
         )
         embed.set_footer(text="Starfall RPG • info")
-
         await interaction.response.send_message(embed=embed, ephemeral=True)
 
 async def setup(bot: commands.Bot) -> NoReturn:

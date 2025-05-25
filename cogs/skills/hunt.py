@@ -18,6 +18,12 @@ if _MOBS_PATH.exists():
     import json
     _mobs_data = json.loads(_MOBS_PATH.read_text(encoding="utf-8")).get("mobs", {})
 
+# Load areas
+_AREAS_PATH = Path("data/areas.json")
+_areas_data: Dict[str, Any] = {}
+if _AREAS_PATH.exists():
+    _areas_data = json.loads(_AREAS_PATH.read_text(encoding="utf-8"))
+
 class CombatCog(commands.Cog):
     """⚔️ Engage in combat with dangerous creatures and reap rewards!"""
 
@@ -43,14 +49,30 @@ class CombatCog(commands.Cog):
         )
         return user
 
-    def _get_area_mobs(self, area: str) -> List[Tuple[str, Dict[str, Any]]]:
-        """Get mobs available in the player's current area."""
-        normalized_area = area.lower().replace(" ", "_")
-        return [
-            (mob_id, mob)
-            for mob_id, mob in _mobs_data.items()
-            if normalized_area in [a.lower().replace(" ", "_") for a in mob.get("spawn_areas", [])]
-        ]
+    def _get_area_mobs(self, area: str, subarea: str) -> List[Tuple[str, Dict[str, Any]]]:
+        """
+        Get mobs available in the player's current subarea of an area,
+        fetching full mob details from _mobs_data.
+        """
+        normalized_area = area.lower()
+        normalized_subarea = subarea.lower()
+
+        # Defensive checks
+        if normalized_area not in _areas_data:
+            return []
+
+        sub_areas = _areas_data[normalized_area].get("sub_areas", {})
+        if normalized_subarea not in sub_areas:
+            return []
+
+        mob_ids = sub_areas[normalized_subarea].get("mobs", [])
+        mobs = []
+        for mob_id in mob_ids:
+            mob_info = _mobs_data.get(mob_id)
+            if mob_info:
+                mobs.append((mob_id, mob_info))
+
+        return mobs
 
     async def _calculate_stats(self, user_id: int) -> Dict[str, int]:
         """Calculate player's combat stats with proper HP handling."""
@@ -153,10 +175,19 @@ class CombatCog(commands.Cog):
 
         # --- 2) Get available mobs ---
         area_data = await db.areas.find_one({"id": user_id})
-        available_mobs = self._get_area_mobs(area_data["currentArea"])
+        if not area_data:
+            return await interaction.response.send_message(
+                "⚠️ Your location data could not be found.",
+                ephemeral=True
+            )
+        
+        current_area = area_data.get("currentArea", "").lower()
+        current_subarea = area_data.get("currentSubarea", "").lower()
+
+        available_mobs = self._get_area_mobs(current_area, current_subarea)
         if not available_mobs:
             return await interaction.response.send_message(
-                f"🌄 No dangerous creatures found in {area_data['currentArea'].replace('_', ' ').title()}!",
+                f"🌄 No dangerous creatures found in {current_subarea.replace('_', ' ').title()}!",
                 ephemeral=True
             )
 

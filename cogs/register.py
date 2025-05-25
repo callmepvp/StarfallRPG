@@ -127,14 +127,8 @@ class RegisterCog(commands.Cog):
             await db.areas.insert_one({
                 "id": user_id,
                 "currentArea": "plains",
-                "currentSubarea": "sunken lagoon",
-                "subareaType": "small",
-                "availableSc": [],
-                "availableFa": [],
-                "availableFiFishing": [],
-                "availableFiTrash": [],
-                "availableFo": [],
-                "availableMi": [],
+                "currentSubarea": "pond",
+                "subareaType": "small"
             })
             await db.skills.insert_one({
                 "id": user_id,

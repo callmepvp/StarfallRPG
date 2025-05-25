@@ -1,5 +1,5 @@
 import time
-from typing import Dict
+from typing import Dict, Any
 
 def regenerate_stamina(user_data: Dict) -> Dict:
     """Regenerates stamina based on time elapsed."""
@@ -8,9 +8,9 @@ def regenerate_stamina(user_data: Dict) -> Dict:
     current_stamina = user_data.get("stamina", 0)
     last_update = user_data.get("lastStaminaUpdate", now)
 
-    # 1 stamina every 5 minutes = 300 seconds
+    # 1 stamina every 3 minutes = 180 seconds
     elapsed = now - last_update
-    regen_amount = int(elapsed // 300)
+    regen_amount = int(elapsed // 180)
 
     if regen_amount > 0 and current_stamina < max_stamina:
         new_stamina = min(current_stamina + regen_amount, max_stamina)
@@ -34,3 +34,9 @@ def calculate_power_rating(user: dict) -> int:
 
     power = strength + defense + evasion + accuracy + bonus_hp_score
     return power
+
+def has_skill_resources(subarea: Dict[str, Any], items: Dict[str, Any], skill_type: str) -> bool:
+    return any(
+        item_name in items and items[item_name].get("type") == skill_type
+        for item_name in subarea.get("resources", [])
+    )

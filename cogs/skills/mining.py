@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.userMethods import regenerate_stamina, calculate_power_rating
+from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load items manifest
 _ITEMS_PATH = Path("data/items.json")
@@ -16,14 +16,11 @@ if _ITEMS_PATH.exists():
     import json
     _items_data = json.loads(_ITEMS_PATH.read_text(encoding="utf-8")).get("items", {})
 
-
-def _get_mining_items() -> List[Tuple[str, Dict[str, Any]]]:
-    return [
-        (key, info)
-        for key, info in _items_data.items()
-        if info.get("type") == "mining"
-    ]
-
+# Load areas data
+_AREAS_PATH = Path("data/areas.json")
+_areas_data: Dict[str, Any] = {}
+if _AREAS_PATH.exists():
+    _areas_data = json.loads(_AREAS_PATH.read_text(encoding="utf-8"))
 
 class MiningCog(commands.Cog):
     """Handles `/mine`: mine ore, gain XP, Essence, collections & level-ups."""
@@ -71,11 +68,38 @@ class MiningCog(commands.Cog):
                 ephemeral=True
             )
 
-        # 2) Pick a random mining item
-        candidates = _get_mining_items()
+        # 2) Get current location and check for mining resources
+        area_doc = await db.areas.find_one({"id": user_id})
+        if not area_doc:
+            return await interaction.response.send_message("❌ Couldn't determine your current location!", ephemeral=True)
+        
+        player_area = area_doc.get("currentArea")
+        player_subarea = area_doc.get("currentSubarea")
+
+        if not player_area or not player_subarea:
+            return await interaction.response.send_message("❌ You're not in a valid location!", ephemeral=True)
+
+        area = _areas_data.get(player_area, {})
+        subarea = area.get("sub_areas", {}).get(player_subarea, {})
+
+        if not subarea:
+            return await interaction.response.send_message("❌ Invalid subarea data!", ephemeral=True)
+
+        if not has_skill_resources(subarea, _items_data, "mining"):
+            return await interaction.response.send_message(
+                "⛏️ There’s nothing to mine in this subarea.",
+                ephemeral=True
+            )
+
+        candidates = [
+            (item_name, _items_data[item_name])
+            for item_name in subarea.get("resources", [])
+            if item_name in _items_data and _items_data[item_name].get("type") == "mining"
+        ]
+
         if not candidates:
             return await interaction.response.send_message(
-                "⚠️ No mining items defined—check items.json!",
+                "⚠️ No mining items available in this subarea!",
                 ephemeral=True
             )
 
