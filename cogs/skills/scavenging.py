@@ -1,63 +1,143 @@
+import datetime
+import random
+from pathlib import Path
+from typing import Any, Dict, List, Tuple
+
 import discord
-from discord.ui import Button, View
 from discord import app_commands
 from discord.ext import commands
 
-import random
-import string
-from json import loads
-from pathlib import Path
+# Load items manifest
+_ITEMS_PATH = Path("data/items.json")
+_items_data: Dict[str, Any] = {}
+if _ITEMS_PATH.exists():
+    import json
+    _items_data = json.loads(_ITEMS_PATH.read_text(encoding="utf-8")).get("items", {})
 
-from pymongo import MongoClient
 
-#Import all data management methods
-from ..functions.dataManagement import *
+def _get_scavenging_items() -> List[Tuple[str, Dict[str, Any]]]:
+    return [
+        (key, info)
+        for key, info in _items_data.items()
+        if info.get("type") == "scavenging"
+    ]
 
-#Retrieve tokens & Initialize database
-data = loads(Path("data/config.json").read_text())
-itemsData = loads(Path("data/items.json").read_text())
-DATABASE_TOKEN = data['DATABASE_TOKEN']
 
-cluster = MongoClient(DATABASE_TOKEN)
-general = cluster['alphaworks']['general']
+class ScavengingCog(commands.Cog):
+    """Handles `/scavenge`: gather herbs & ingredients, gain XP, Essence, and grow your herb collection."""
 
-class scavenging(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
 
     @app_commands.command(
-        name = "scavenge",
-        description = "Scavenge the grounds for useful herbs.")
+        name="scavenge",
+        description="🪴 Scavenge the wilds for herbs and ingredients!"
+    )
+    async def scavenge(self, interaction: discord.Interaction) -> None:
+        db = self.bot.db  # type: ignore[attr-defined]
+        user_id = interaction.user.id
 
-    async def scavenging(self,interaction: discord.Interaction):
-        if general.find_one({'id' : interaction.user.id}) is not None:
-            if general.find_one({'id' : interaction.user.id})['stamina'] != 0: #Stamina Check
+        # 1) Registration & stamina
+        profile = await db.general.find_one({"id": user_id})
+        if not profile:
+            return await interaction.response.send_message(
+                "❌ You need to `/register` before scavenging!",
+                ephemeral=True
+            )
+        if profile.get("stamina", 0) <= 0:
+            return await interaction.response.send_message(
+                "😴 You’re out of stamina! Rest first.",
+                ephemeral=True
+            )
 
-                choices, weights = updateAndReturnAvailableResources(interaction.user.id, "scavenging")
+        # 2) Pick a random scavenging item
+        candidates = _get_scavenging_items()
+        if not candidates:
+            return await interaction.response.send_message(
+                "⚠️ No scavenging items defined—check items.json!",
+                ephemeral=True
+            )
 
-                if len(choices) != 0:
-                    choice = random.choices(choices, weights=weights)[0]
-                    amount = random.randint(1, 2)
-                    xp = itemsData["items"][choice]["xp"] * amount
+        keys, weights = zip(*[(k, info.get("weight", 10)) for k, info in candidates])
+        picked = random.choices(keys, weights=weights, k=1)[0]
+        info = _items_data[picked]
 
-                    message = []
-                    message.append(f":herb: You **Scavenged**! You got **{amount}** x **{string.capwords(choice)}**!")
-                      
-                    updateInventory(interaction.user.id, choice, amount)
-                    message = updateEssence(interaction.user.id, "scavenging", xp, message)
-                    message = updateSkills(interaction.user.id, "scavenging", xp, message)
-                    message = updateCollections(interaction.user.id, amount, "herb", message)
+        qty = random.randint(1, 3)
+        xp_gain = info.get("xp", 1) * qty
+        essence_gain = round(xp_gain * 0.35, 2)
 
-                    await interaction.response.send_message(''.join(message))
+        # 3) Updates
+        await db.inventory.update_one({"id": user_id}, {"$inc": {picked: qty}})
+        await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
+        sk = await db.skills.find_one({"id": user_id})
+        old_xp, old_lvl = sk["scavengingXP"], sk["scavengingLevel"]
+        new_xp = old_xp + xp_gain
+        lvl_thr = 50 * old_lvl + 10
 
-                else:
-                    await interaction.response.send_message(ephemeral=True, content="You don't have what it takes to scavenge!")
-            else:
-                await interaction.response.send_message(ephemeral=True, content="You don't have enough stamina!")
+        leveled = False
+        bonus = 2
+        if new_xp >= lvl_thr:
+            leveled = True
+            leftover = new_xp - lvl_thr
+            await db.skills.update_one(
+                {"id": user_id},
+                {"$set": {"scavengingLevel": old_lvl + 1, "scavengingXP": leftover},
+                 "$inc": {"scavengingBonus": bonus}}
+            )
         else:
-            await interaction.response.send_message(ephemeral=True, content="Please setup your account with `/register` before using this command.")
+            await db.skills.update_one({"id": user_id}, {"$set": {"scavengingXP": new_xp}})
+
+        await db.general.update_one({"id": user_id}, {"$inc": {"scavengingEssence": essence_gain}})
+
+        coll = await db.collections.find_one({"id": user_id})
+        old_coll, old_coll_lvl = coll["herb"], coll["herbLevel"]
+        new_coll = old_coll + qty
+        coll_thr = 50 * old_coll_lvl + 50
+
+        coll_leveled = False
+        if new_coll >= coll_thr:
+            coll_leveled = True
+            await db.collections.update_one(
+                {"id": user_id},
+                {"$set": {"herb": new_coll, "herbLevel": old_coll_lvl + 1}}
+            )
+        else:
+            await db.collections.update_one({"id": user_id}, {"$set": {"herb": new_coll}})
+
+        # 4) Embed
+        embed = discord.Embed(
+            title="🪴 Scavenging Results",
+            color=discord.Color.gold(),
+            timestamp=datetime.datetime.now()
+        )
+        embed.add_field(
+            name="Herbs Gathered",
+            value=f"You collected **{qty}** × **{info['name'].title()}**",
+            inline=False
+        )
+        embed.add_field(name="Scavenging XP", value=f"⭐ {xp_gain:,} XP", inline=True)
+        embed.add_field(name="Scavenging Essence", value=f"✨ {essence_gain:,}", inline=True)
+        embed.add_field(
+            name="Stamina Remaining",
+            value=f"💪 {profile['stamina'] - 1}",
+            inline=False
+        )
+        if leveled:
+            embed.add_field(
+                name="🏅 Level Up!",
+                value=f"Your **Scavenging** is now **Level {old_lvl + 1}** \n(+{bonus} scavenging bonus!)",
+                inline=False
+            )
+        if coll_leveled:
+            embed.add_field(
+                name="📚 Collection Level!", 
+                value=f"Your **Herb Collection** is now **Level {old_coll_lvl + 1}**",
+                inline=False
+            )
+
+        await interaction.response.send_message(embed=embed)
+
 
 async def setup(bot: commands.Bot) -> None:
-    await bot.add_cog(
-        scavenging(bot),
-        guilds = [discord.Object(id = 1047945458665914388)])
+    from settings import GUILD_ID
+    await bot.add_cog(ScavengingCog(bot), guilds=[discord.Object(id=GUILD_ID)])
