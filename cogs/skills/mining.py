@@ -55,7 +55,7 @@ class MiningCog(commands.Cog):
         db = self.bot.db  # type: ignore[attr-defined]
         user_id = interaction.user.id
 
-        # 1) Registration & stamina
+        # 1) Registration & stamina & tool
         profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message(
@@ -65,6 +65,23 @@ class MiningCog(commands.Cog):
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message(
                 "😴 You’re out of stamina! Rest before mining.",
+                ephemeral=True
+            )
+        
+        equipment_doc = await db.equipment.find_one({"id": user_id})
+        tool_iid = equipment_doc.get("miningTool")
+        if not tool_iid:
+            return await interaction.response.send_message(
+                "❌ You must equip a mining tool first.",
+                ephemeral=True
+            )
+
+        # make sure the instance actually exists in the player's instances array
+        instances = equipment_doc.get("instances", [])
+        if not any(inst.get("instance_id") == tool_iid for inst in instances):
+            return await interaction.response.send_message(
+                "❌ Your equipped mining tool couldn't be found in your instances. "
+                "If this persists, contact the dev.",
                 ephemeral=True
             )
 

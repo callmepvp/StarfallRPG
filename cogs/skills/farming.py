@@ -56,7 +56,7 @@ class FarmingCog(commands.Cog):
     async def farm(self, interaction: discord.Interaction) -> None:
         db = self.bot.db  # type: ignore[attr-defined]
 
-        # --- 1) Ensure user exists and has stamina ---
+        # 1) Registration & stamina & tool
         user_id = interaction.user.id
         profile = await self.get_regen_user(user_id)
         if not profile:
@@ -67,6 +67,23 @@ class FarmingCog(commands.Cog):
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message(
                 "😴 You’re out of stamina! Rest or use a potion before farming again.",
+                ephemeral=True
+            )
+        
+        equipment_doc = await db.equipment.find_one({"id": user_id})
+        tool_iid = equipment_doc.get("farmingTool")
+        if not tool_iid:
+            return await interaction.response.send_message(
+                "❌ You must equip a farming tool first.",
+                ephemeral=True
+            )
+
+        # make sure the instance actually exists in the player's instances array
+        instances = equipment_doc.get("instances", [])
+        if not any(inst.get("instance_id") == tool_iid for inst in instances):
+            return await interaction.response.send_message(
+                "❌ Your equipped farming tool couldn't be found in your instances. "
+                "If this persists, contact the dev.",
                 ephemeral=True
             )
 

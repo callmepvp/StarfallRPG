@@ -64,7 +64,7 @@ class FishingCog(commands.Cog):
         db = self.bot.db  # type: ignore[attr-defined]
         user_id = interaction.user.id
 
-        # 1) Ensure registered & has stamina
+        # 1) Ensure registered & has stamina & tool
         profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message(
@@ -74,6 +74,23 @@ class FishingCog(commands.Cog):
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message(
                 "😴 You’re out of stamina! Rest or boost before fishing again.",
+                ephemeral=True
+            )
+        
+        equipment_doc = await db.equipment.find_one({"id": user_id})
+        tool_iid = equipment_doc.get("fishingTool")
+        if not tool_iid:
+            return await interaction.response.send_message(
+                "❌ You must equip a fishing tool first.",
+                ephemeral=True
+            )
+
+        # make sure the instance actually exists in the player's instances array
+        instances = equipment_doc.get("instances", [])
+        if not any(inst.get("instance_id") == tool_iid for inst in instances):
+            return await interaction.response.send_message(
+                "❌ Your equipped fishing tool couldn't be found in your instances. "
+                "If this persists, contact the dev.",
                 ephemeral=True
             )
 
@@ -234,7 +251,7 @@ class FishingCog(commands.Cog):
 
         embed.add_field(name="Fishing XP", value=f"⭐ {xp_gain:,} XP", inline=True)
         embed.add_field(name="Fishing Essence", value=f"✨ {essence_gain}", inline=True)
-        embed.add_field(name="⚡ Stamina Remaining", value=f"{profile['stamina'] - 1}", inline=False)
+        embed.add_field(name="Stamina Remaining", value=f"{profile['stamina'] - 1}", inline=False)
 
         if leveled_fish:
             embed.add_field(
