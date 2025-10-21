@@ -1,0 +1,32 @@
+{
+  "Wooden Fishing Rod": {
+    "name": "Wooden Fishing Rod",
+    "emoji": "🎣",
+    "type": "tool",
+    "equip_slots": ["fishingTool"]
+  },
+  "Wooden Pickaxe": {
+    "name": "Wooden Pickaxe",
+    "emoji": "⛏️",
+    "type": "tool",
+    "equip_slots": ["miningTool"]
+  },
+  "Wooden Axe": {
+    "name": "Wooden Axe",
+    "emoji": "🪓",
+    "type": "tool",
+    "equip_slots": ["foragingTool"]
+  },
+  "Wooden Hoe": {
+    "name": "Wooden Hoe",
+    "emoji": "🌾",
+    "type": "tool",
+    "equip_slots": ["farmingTool"]
+  },
+  "Wooden Machete": {
+    "name": "Wooden Machete",
+    "emoji": "🗡️",
+    "type": "tool",
+    "equip_slots": ["scavengingTool"]
+  }
+}

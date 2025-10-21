@@ -1,6 +1,7 @@
 import datetime
 import time
-from typing import Optional
+from typing import Optional, Dict, Any
+import json
 
 import string
 import datetime
@@ -9,6 +10,8 @@ import discord, random
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, Modal, TextInput, View
+
+from pathlib import Path
 
 from database import Database
 from settings import GUILD_ID
@@ -35,6 +38,16 @@ _starters = {
     "farmingTool": "Wooden Hoe",
     "scavengingTool": "Wooden Machete",
 }
+
+ITEM_TEMPLATES_PATH = Path("data/itemTemplates.json")
+
+# Load the JSON file
+item_templates: Dict[str, Any] = {}
+if ITEM_TEMPLATES_PATH.exists():
+    with ITEM_TEMPLATES_PATH.open(encoding="utf-8") as f:
+        item_templates = json.load(f)
+else:
+    raise FileNotFoundError(f"{ITEM_TEMPLATES_PATH} not found. Make sure it exists!")
 
 class CharacterCustomizationModal(Modal):
     """Modal for choosing your character’s display name and brief bio."""
@@ -189,6 +202,7 @@ class RegisterCog(commands.Cog):
                     "custom_name": None,
                     "bound": False,
                     "created_at": now,
+                    "slots": item_templates[template_name]["equip_slots"]
                 }
                 instances.append(inst_doc)
                 slot_refs[slot] = iid

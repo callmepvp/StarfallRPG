@@ -8,10 +8,18 @@ from discord import app_commands
 from discord.ext import commands
 from discord.ui import View, Button, Select
 
+from pathlib import Path
+import json
+
 from settings import GUILD_ID
 
 PAGE_SIZE = 10
 INVENTORY_PAGE_SIZE = 10
+
+_ITEM_TEMPLATES_PATH = Path("data/itemTemplates.json")
+item_templates = {}
+if _ITEM_TEMPLATES_PATH.exists():
+    item_templates = json.loads(_ITEM_TEMPLATES_PATH.read_text(encoding="utf-8"))
 
 class PaginationView(View):
     def __init__(
@@ -54,7 +62,7 @@ class PaginationView(View):
         self.selector = Select(
             placeholder="Choose view...",
             options=[
-                discord.SelectOption(label="Instances", description="Your equipment instances", value="instances"),
+                discord.SelectOption(label="Equipment", description="Your equipment instances", value="instances"),
                 discord.SelectOption(label="Inventory", description="Your inventory items", value="inventory"),
             ],
             min_values=1,
@@ -237,6 +245,133 @@ class EquipmentCog(commands.Cog):
         page_msg = await interaction.followup.send(content=first_page_content, view=view, ephemeral=False)
         view.message = page_msg
 
+    #### EQUIPPING COMMANDS
+    @app_commands.command(
+        name="equip",
+        description="Equip an item using its instance ID."
+    )
+    @app_commands.describe(instance_id="The instance ID of the item you want to equip")
+    async def equip(self, interaction: discord.Interaction, instance_id: str):
+        db = getattr(self.bot, "db", None)
+        if db is None:
+            return await interaction.response.send_message("❌ Database not available.", ephemeral=True)
+
+        user_id = interaction.user.id
+        equip_doc = await db.equipment.find_one({"id": user_id})
+        if not equip_doc:
+            return await interaction.response.send_message("❌ No equipment profile found. Try `/register`.", ephemeral=True)
+
+        # Find instance
+        inst = next((it for it in equip_doc.get("instances", []) if it.get("instance_id") == instance_id), None)
+        if not inst:
+            return await interaction.response.send_message(
+                f"❌ No item with ID `{instance_id}` found in your inventory.", ephemeral=True
+            )
+        
+        # CHeck if alreay equipped
+        for slot_name, slot_val in equip_doc.items():
+            if slot_name in self.ARMOR_SLOTS + self.TOOL_SLOTS and slot_val == instance_id:
+                return await interaction.response.send_message(
+                    f"❌ This item (`{instance_id}`) is already equipped in **{self.SLOT_LABELS.get(slot_name, slot_name)}**.",
+                    ephemeral=True
+                )
+
+        template_name = inst.get("template", "")
+        template_data = item_templates.get(template_name)
+        if not template_data:
+            return await interaction.response.send_message(
+                f"❌ Template `{template_name}` not found in item templates.", ephemeral=True
+            )
+
+        allowed_slots: list = template_data.get("equip_slots", [])
+        if not allowed_slots:
+            return await interaction.response.send_message(
+                f"❌ `{template_name}` cannot be equipped in any slot.", ephemeral=True
+            )
+
+        empty_slots = [slot for slot in allowed_slots if not equip_doc.get(slot)]
+        if len(empty_slots) == 1:
+            # Only one empty slot, equip automatically
+            slot_to_use = empty_slots[0]
+            equip_doc[slot_to_use] = instance_id
+            await db.equipment.update_one({"id": user_id}, {"$set": {slot_to_use: instance_id}})
+            return await interaction.response.send_message(
+                f"✅ Equipped `{template_name}` in **{self.SLOT_LABELS.get(slot_to_use, slot_to_use)}**.", ephemeral=True
+            )
+        elif len(empty_slots) == 0:
+            return await interaction.response.send_message(
+                f"❌ All allowed slots for `{template_name}` are occupied. Unequip one first.", ephemeral=True
+            )
+        else:
+            # Multiple empty slots — ask user via dropdown
+            class SlotSelect(discord.ui.Select):
+                def __init__(self, slots: list[str], slot_labels: dict):
+                    self.slot_labels = slot_labels
+                    options = [
+                        discord.SelectOption(label=self.slot_labels.get(slot, slot), value=slot)
+                        for slot in slots
+                    ]
+                    super().__init__(placeholder="Choose a slot to equip", max_values=1, min_values=1, options=options)
+
+                async def callback(self, interaction: discord.Interaction):
+                    chosen_slot = self.values[0]  # ✅ Correctly access selected value
+                    equip_doc[chosen_slot] = instance_id
+                    await db.equipment.update_one({"id": user_id}, {"$set": {chosen_slot: instance_id}})
+                    await interaction.response.edit_message(
+                        content=f"✅ Equipped `{template_name}` in **{self.slot_labels.get(chosen_slot, chosen_slot)}**.",
+                        view=None
+                    )
+
+            class SlotSelectView(discord.ui.View):
+                def __init__(self, slots: list[str], slot_labels: dict, timeout=60):
+                    super().__init__(timeout=timeout)
+                    self.add_item(SlotSelect(slots, slot_labels))
+
+            view = SlotSelectView(empty_slots, self.SLOT_LABELS)
+            await interaction.response.send_message(
+                f"⚠️ `{template_name}` can go into multiple slots. Choose one:",
+                view=view,
+                ephemeral=True
+            )
+
+    @app_commands.command(
+    name="unequip",
+    description="Unequip an item either by instance ID or slot name.")
+    @app_commands.describe(identifier="Either the instance ID or the slot name to unequip")
+    async def unequip(self, interaction: discord.Interaction, identifier: str):
+        db = getattr(self.bot, "db", None)
+        if db is None:
+            return await interaction.response.send_message("❌ Database not available.", ephemeral=True)
+
+        user_id = interaction.user.id
+        equip_doc = await db.equipment.find_one({"id": user_id})
+        if not equip_doc:
+            return await interaction.response.send_message("❌ No equipment profile found. Try `/register`.", ephemeral=True)
+
+        identifier_lower = identifier.lower()
+
+        # First check if identifier matches a slot name
+        slot_map = {label.lower(): slot for slot, label in self.SLOT_LABELS.items()}
+        if identifier_lower in slot_map:
+            slot = slot_map[identifier_lower]
+            if not equip_doc.get(slot):
+                return await interaction.response.send_message(f"⚠️ Slot **{self.SLOT_LABELS.get(slot, slot)}** is already empty.", ephemeral=True)
+            equip_doc[slot] = None
+            await db.equipment.update_one({"id": user_id}, {"$set": {slot: None}})
+            return await interaction.response.send_message(f"✅ Unequipped **{self.SLOT_LABELS.get(slot, slot)}**.", ephemeral=True)
+
+        # Otherwise, treat as instance ID
+        found_slot = None
+        for s in self.TOOL_SLOTS + self.ARMOR_SLOTS:
+            if equip_doc.get(s) == identifier:
+                found_slot = s
+                break
+        if not found_slot:
+            return await interaction.response.send_message(f"❌ No equipped item with ID `{identifier}` found.", ephemeral=True)
+
+        equip_doc[found_slot] = None
+        await db.equipment.update_one({"id": user_id}, {"$set": {found_slot: None}})
+        await interaction.response.send_message(f"✅ Unequipped `{identifier}` from **{self.SLOT_LABELS.get(found_slot, found_slot)}**.", ephemeral=True)
 
 async def setup(bot: commands.Bot) -> None:
     await bot.add_cog(EquipmentCog(bot), guilds=[discord.Object(id=GUILD_ID)])
