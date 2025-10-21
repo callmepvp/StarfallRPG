@@ -48,9 +48,6 @@ class InfoCog(commands.Cog):
         now = datetime.datetime.utcnow()
         uptime = now - START_TIME
         line_count = count_lines(Path(os.getcwd()))
-        text_cmds = len([c for c in self.bot.commands if not c.hidden])
-        slash_cmds = len(self.bot.tree.get_commands())
-        total_cmds = text_cmds + slash_cmds
 
         embed = discord.Embed(
             title="🤖 Bot Information",
@@ -63,8 +60,6 @@ class InfoCog(commands.Cog):
         embed.add_field(name="Ping",         value=f"`{round(self.bot.latency * 1000)} ms`", inline=True)
         embed.add_field(name="Uptime",       value=f"`{str(uptime).split('.')[0]}`", inline=True)
         embed.add_field(name="Code Lines",   value=f"`{line_count:,}`", inline=True)
-        embed.add_field(name="Text Commands",  value=f"`{text_cmds}`", inline=True)
-        embed.add_field(name="Slash Commands", value=f"`{slash_cmds}`", inline=True)
 
         embed.set_author(
             name=interaction.user.display_name,

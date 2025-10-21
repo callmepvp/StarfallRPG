@@ -98,7 +98,6 @@ class InventoryCog(commands.Cog):
         view = InventoryView(pages)
         await interaction.response.send_message(content=pages[0], view=view, ephemeral=False)
 
-
 async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID
     await bot.add_cog(InventoryCog(bot), guilds=[discord.Object(id=GUILD_ID)])

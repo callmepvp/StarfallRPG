@@ -73,9 +73,11 @@ class Client(commands.Bot):
 
         # Database
         logger.info("Connecting to MongoDB…")
-        self.db = Database(DATABASE_URI)
-        if not await self.db.ping():
+        self.db = Database(DATABASE_URI, db_name="alphaworks")
+        connected = await self.db.connect(max_retries=3, backoff_seconds=0.5)
+        if not connected:
             logger.error("❌ Could not connect to MongoDB. DB-backed features may fail.")
+
 
         # Load all top-level cogs
         for cog_path in Path("cogs").glob("*.py"):

@@ -2,13 +2,39 @@ import datetime
 import time
 from typing import Optional
 
-import discord
+import string
+import datetime
+
+import discord, random
 from discord import app_commands
 from discord.ext import commands
 from discord.ui import Button, Modal, TextInput, View
 
 from database import Database
 from settings import GUILD_ID
+
+
+_CHARSET = string.ascii_uppercase + string.digits  # A-Z + 0-9
+_ID_LENGTH = 5
+
+def _make_instance_id(existing_ids: set[str] | None = None) -> str:
+    """
+    Generate a 5-character ID from A-Z0-9 that does not collide with existing_ids (if provided).
+    """
+    existing = existing_ids or set()
+    while True:
+        candidate = ''.join(random.choices(_CHARSET, k=_ID_LENGTH))
+        if candidate not in existing:
+            return candidate
+
+## Starter Equipment Templates
+_starters = {
+    "fishingTool": "Wooden Fishing Rod",
+    "miningTool": "Wooden Pickaxe",
+    "foragingTool": "Wooden Axe",
+    "farmingTool": "Wooden Hoe",
+    "scavengingTool": "Wooden Machete",
+}
 
 class CharacterCustomizationModal(Modal):
     """Modal for choosing your character’s display name and brief bio."""
@@ -144,6 +170,53 @@ class RegisterCog(commands.Cog):
                 "fish": 0, "fishLevel": 0,
             })
             await db.recipes.insert_one({"id": user_id, "toolrod": True})
+
+            ## SETUP THE EQUIPPED TOOLS AND INSTANCES
+            instances = []
+            slot_refs = {}
+            used_ids = set()
+
+            # generate unique 5-char ids per-player (check within this player's created instances)
+            for slot, template_name in _starters.items():
+                iid = _make_instance_id(existing_ids=used_ids)
+                used_ids.add(iid)
+
+                # instance doc stored inside the player's equipment doc
+                inst_doc = {
+                    "instance_id": iid,
+                    "template": template_name,
+                    "enchants": [],
+                    "custom_name": None,
+                    "bound": False,
+                    "created_at": now,
+                }
+                instances.append(inst_doc)
+                slot_refs[slot] = iid
+
+            # convert used_ids to list for storage
+            used_ids_list = list(used_ids)
+
+            await db.equipment.insert_one({
+                "id": user_id,
+                "head": None,
+                "chest": None,
+                "legs": None,
+                "feet": None,
+                "mainhand": None,
+                "offhand": None,
+                "accessory1": None,
+                "accessory2": None,
+                # action tools point to instance_ids created above
+                "fishingTool": slot_refs["fishingTool"],
+                "miningTool": slot_refs["miningTool"],
+                "foragingTool": slot_refs["foragingTool"],
+                "farmingTool": slot_refs["farmingTool"],
+                "scavengingTool": slot_refs["scavengingTool"],
+                # all item instances owned by this player (including the equipped ones)
+                "instances": instances,
+                # store used short ids for quick uniqueness checks later
+                "used_ids": used_ids_list,
+            })
 
     
             modal = CharacterCustomizationModal(user_id, db)

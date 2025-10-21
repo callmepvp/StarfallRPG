@@ -13,14 +13,14 @@
         "image": "url_to_pond_image",
         "mobs": [],
         "resources": ["rubber duck", "boot", "seaweed", "perch", "cod", "trout", "oak"],
-        "connections": ["village_1", "meadow"]
+        "connections": ["village1", "meadow"]
       },
-      "village_1": {
+      "village1": {
         "name": "Village 1",
         "type": "small",
         "lore": "A humble village where travelers rest and villagers live simple lives.",
-        "image": "url_to_village_1_image",
-        "mobs": [],
+        "image": "url_to_village1_image",
+        "mobs": ["goblin"],
         "resources": ["oak", "stone", "coal", "wheat", "carrot"],
         "connections": ["pond", "well", "meadow"]
       },
@@ -31,7 +31,7 @@
         "image": "url_to_meadow_image",
         "mobs": ["plains_coyote", "mudback_boar"],
         "resources": ["oak", "silverleaf", "needlegrass", "stone", "coal"],
-        "connections": ["pond", "village_1", "village_2"]
+        "connections": ["pond", "village1", "village2"]
       },
       "well": {
         "name": "Well",
@@ -40,7 +40,7 @@
         "image": "url_to_well_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village_1", "church"]
+        "connections": ["village1", "church"]
       },
       "church": {
         "name": "Church",
@@ -49,14 +49,14 @@
         "image": "url_to_church_image",
         "mobs": [],
         "resources": [],
-        "connections": ["well", "village_2"]
+        "connections": ["well", "village2"]
       },
-      "village_2": {
+      "village2": {
         "name": "Village 2",
         "type": "large",
         "lore": "A larger, bustling village with markets and a cathedral at its center.",
-        "image": "url_to_village_2_image",
-        "mobs": [],
+        "image": "url_to_village2_image",
+        "mobs": ["goblin"],
         "resources": ["oak", "stone", "coal", "wheat", "carrot"],
         "connections": ["meadow", "church", "cathedral", "market"]
       },
@@ -67,7 +67,7 @@
         "image": "url_to_cathedral_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village_2", "market"]
+        "connections": ["village2", "market"]
       },
       "market": {
         "name": "Market",
@@ -76,7 +76,7 @@
         "image": "url_to_market_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village_2", "cathedral"]
+        "connections": ["village2", "cathedral"]
       }
     }
   }
