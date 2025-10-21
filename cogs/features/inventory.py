@@ -46,7 +46,7 @@ class InventoryView(View):
 
 
 class InventoryCog(commands.Cog):
-    """Shows your inventory with paging."""
+    """Shows your inventories with paging."""
 
     def __init__(self, bot: commands.Bot) -> None:
         self.bot = bot
