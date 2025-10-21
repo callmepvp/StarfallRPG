@@ -34,7 +34,7 @@ class ProfileCog(commands.Cog):
 
     @app_commands.command(
         name="profile",
-        description="👤 Show your Starfall RPG profile."
+        description="Show your Starfall RPG profile."
     )
     async def profile(self, interaction: discord.Interaction) -> None:
         db = self.bot.db  # type: ignore[attr-defined]

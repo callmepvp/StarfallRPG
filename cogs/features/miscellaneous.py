@@ -7,7 +7,7 @@ from server.userMethods import regenerate_stamina
 from settings import GUILD_ID
 
 class MiscCommandCog(commands.Cog):
-    """🧭 Miscellaneous helpful commands."""
+    """Miscellaneous helpful commands."""
 
     def __init__(self, bot: commands.Bot):
         self.bot = bot
@@ -30,7 +30,7 @@ class MiscCommandCog(commands.Cog):
 
     @app_commands.command(
         name="rest",
-        description="😴 Rest to recover HP by spending stamina (1 stamina = 2 HP)."
+        description="Rest to recover HP by spending stamina (1 stamina = 2 HP)."
     )
     @app_commands.describe(target_hp="The total HP you want to rest up to.")
     async def rest(self, interaction: Interaction, target_hp: int):

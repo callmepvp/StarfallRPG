@@ -31,7 +31,7 @@ class InfoCog(commands.Cog):
 
     @app_commands.command(
         name="info",
-        description="📰 Show bot status, uptime, versions, and code statistics."
+        description="Show bot status, uptime, versions, and code statistics."
     )
     async def info(self, interaction: discord.Interaction) -> None:
         # Only allow registered users

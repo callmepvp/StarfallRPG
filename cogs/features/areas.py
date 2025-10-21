@@ -38,7 +38,7 @@ class AreaCommands(commands.Cog):
     """Handles `/area` command to display current area and sub-area details."""
     @app_commands.command(
         name="area",
-        description="🌍 View information about your current area and sub-area."
+        description="View information about your current area and subarea."
     )
     async def area(self, interaction: discord.Interaction) -> None:
         db = self.bot.db  # type: ignore[attr-defined]
