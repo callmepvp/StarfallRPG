@@ -130,7 +130,7 @@ class EquipmentCog(commands.Cog):
 
     ARMOR_SLOTS = [
         "head", "chest", "legs", "feet",
-        "mainhand", "offhand",
+        "mainHand", "offHand",
         "accessory1", "accessory2",
     ]
 
@@ -140,7 +140,7 @@ class EquipmentCog(commands.Cog):
 
     SLOT_LABELS = {
         "head": "Head", "chest": "Chest", "legs": "Legs", "feet": "Feet",
-        "mainhand": "Main Hand", "offhand": "Off Hand",
+        "mainHand": "Main Hand", "offHand": "Off Hand",
         "accessory1": "Accessory 1", "accessory2": "Accessory 2",
         "fishingTool": "Fishing Tool", "miningTool": "Mining Tool",
         "foragingTool": "Foraging Tool", "farmingTool": "Farming Tool",

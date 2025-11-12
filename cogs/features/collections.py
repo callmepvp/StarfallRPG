@@ -123,7 +123,7 @@ class CollectionsCog(commands.Cog):
             if locked_count:
                 footer_parts.append(f"Locked: {locked_count}")
             if next_locked_tier is not None:
-                footer_parts.append(f"Next unlock @ **Tier {next_locked_tier}**")
+                footer_parts.append(f"Next unlock @ **Level {next_locked_tier}**")
 
             embed.add_field(
                 name=f"🔸 {pretty}",

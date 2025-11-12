@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.userMethods import regenerate_stamina, calculate_power_rating
+from server.userMethods import regenerate_stamina, calculate_power_rating, unlock_collection_recipes
 
 # Load the global items manifest
 _ITEMS_PATH = Path("data/items.json")
@@ -225,10 +225,14 @@ class FishingCog(commands.Cog):
             new_c = old_c + qty
             coll_thr = 50 * old_cl + 50
             if new_c >= coll_thr:
+                new_level = old_c + 1
                 await db.collections.update_one(
                     {"id": user_id},
                     {"$set": {"fish": new_c, "fishLevel": old_cl + 1}}
                 )
+                # Unlock new recipes for this collection
+                await unlock_collection_recipes(db, user_id, "fish", new_level)
+                
             else:
                 await db.collections.update_one({"id": user_id}, {"$set": {"fish": new_c}})
 

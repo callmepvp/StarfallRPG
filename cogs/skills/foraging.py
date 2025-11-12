@@ -7,7 +7,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
+from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources, unlock_collection_recipes
 
 # Load items manifest once
 _ITEMS_PATH = Path("data/items.json")
@@ -177,10 +177,13 @@ class ForagingCog(commands.Cog):
         coll_leveled = False
         if new_coll >= coll_thr:
             coll_leveled = True
+            new_level = old_coll_lvl + 1
             await db.collections.update_one(
                 {"id": user_id},
                 {"$set": {"wood": new_coll, "woodLevel": old_coll_lvl + 1}}
             )
+            # Unlock new recipes for this collection
+            await unlock_collection_recipes(db, user_id, "wood", new_level)
         else:
             await db.collections.update_one(
                 {"id": user_id}, {"$set": {"wood": new_coll}}
