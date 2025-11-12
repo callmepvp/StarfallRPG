@@ -25,7 +25,43 @@
   },
   "Wooden Machete": {
     "name": "Wooden Machete",
+    "emoji": "🌱",
+    "type": "tool",
+    "equip_slots": ["scavengingTool"]
+  },
+  "Wooden Dagger": {
+    "name": "Wooden Dagger",
     "emoji": "🗡️",
+    "type": "weapon",
+    "equip_slots": ["mainHand"]
+  },
+  "Stone Fishing Rod": {
+    "name": "Stone Fishing Rod",
+    "emoji": "🎣",
+    "type": "tool",
+    "equip_slots": ["fishingTool"]
+  },
+  "Stone Pickaxe": {
+    "name": "Stone Pickaxe",
+    "emoji": "⛏️",
+    "type": "tool",
+    "equip_slots": ["miningTool"]
+  },
+  "Stone Axe": {
+    "name": "Stone Axe",
+    "emoji": "🪓",
+    "type": "tool",
+    "equip_slots": ["foragingTool"]
+  },
+  "Stone Hoe": {
+    "name": "Stone Hoe",
+    "emoji": "🌾",
+    "type": "tool",
+    "equip_slots": ["farmingTool"]
+  },
+  "Stone Machete": {
+    "name": "Stone Machete",
+    "emoji": "🌱",
     "type": "tool",
     "equip_slots": ["scavengingTool"]
   }

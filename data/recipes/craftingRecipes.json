@@ -21,6 +21,18 @@
         }
     ],
 
+    "wooden dagger": [
+        {
+            "0" : "toolrod",
+            "1" : "binding",
+            "2" : "oak",
+
+            "r0" : "2",
+            "r1" : "1",
+            "r2" : "3"
+        }
+    ],
+
     "pickaxe mold": [
         {
             "0" : "stone",
@@ -57,7 +69,7 @@
         }
     ],
 
-    "glove cast": [
+    "machete mold": [
         {
             "0" : "stone",
             "1" : "silverleaf",
@@ -123,10 +135,10 @@
         }
     ],
 
-    "stone gloves": [
+    "stone machete": [
         {
             "0" : "stone",
-            "1" : "glove cast",
+            "1" : "machete mold",
 
             "r0" : "3",
             "r1" : "1"
