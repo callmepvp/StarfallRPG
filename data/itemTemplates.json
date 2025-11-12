@@ -3,66 +3,112 @@
     "name": "Wooden Fishing Rod",
     "emoji": "🎣",
     "type": "tool",
-    "equip_slots": ["fishingTool"]
+    "equip_slots": ["fishingTool"],
+    "tier": "wood",
+    "yield_multiplier": 1.00,
+    "extra_roll_chance": 0.02,
+    "rare_multiplier": 1.00
   },
   "Wooden Pickaxe": {
     "name": "Wooden Pickaxe",
     "emoji": "⛏️",
     "type": "tool",
-    "equip_slots": ["miningTool"]
+    "equip_slots": ["miningTool"],
+    "tier": "wood",
+    "yield_multiplier": 1.00,
+    "extra_roll_chance": 0.02,
+    "rare_multiplier": 1.00
   },
   "Wooden Axe": {
     "name": "Wooden Axe",
     "emoji": "🪓",
     "type": "tool",
-    "equip_slots": ["foragingTool"]
+    "equip_slots": ["foragingTool"],
+    "tier": "wood",
+    "yield_multiplier": 1.00,
+    "extra_roll_chance": 0.02,
+    "rare_multiplier": 1.00
   },
   "Wooden Hoe": {
     "name": "Wooden Hoe",
     "emoji": "🌾",
     "type": "tool",
-    "equip_slots": ["farmingTool"]
+    "equip_slots": ["farmingTool"],
+    "tier": "wood",
+    "yield_multiplier": 1.00,
+    "extra_roll_chance": 0.02,
+    "rare_multiplier": 1.00
   },
   "Wooden Machete": {
     "name": "Wooden Machete",
     "emoji": "🌱",
     "type": "tool",
-    "equip_slots": ["scavengingTool"]
+    "equip_slots": ["scavengingTool"],
+    "tier": "wood",
+    "yield_multiplier": 1.00,
+    "extra_roll_chance": 0.02,
+    "rare_multiplier": 1.00
   },
   "Wooden Dagger": {
     "name": "Wooden Dagger",
     "emoji": "🗡️",
     "type": "weapon",
-    "equip_slots": ["mainHand"]
+    "equip_slots": ["mainHand"],
+    "stats": {
+      "STR": 1,
+      "AGI": 1,
+      "CRITPER": 0.02,
+      "SKILL": 0.01
+    }
   },
   "Stone Fishing Rod": {
     "name": "Stone Fishing Rod",
     "emoji": "🎣",
     "type": "tool",
-    "equip_slots": ["fishingTool"]
+    "equip_slots": ["fishingTool"],
+    "tier": "stone",
+    "yield_multiplier": 1.15,
+    "extra_roll_chance": 0.04,
+    "rare_multiplier": 1.10
   },
   "Stone Pickaxe": {
     "name": "Stone Pickaxe",
     "emoji": "⛏️",
     "type": "tool",
-    "equip_slots": ["miningTool"]
+    "equip_slots": ["miningTool"],
+    "tier": "stone",
+    "yield_multiplier": 1.15,
+    "extra_roll_chance": 0.04,
+    "rare_multiplier": 1.10
   },
   "Stone Axe": {
     "name": "Stone Axe",
     "emoji": "🪓",
     "type": "tool",
-    "equip_slots": ["foragingTool"]
+    "equip_slots": ["foragingTool"],
+    "tier": "stone",
+    "yield_multiplier": 1.15,
+    "extra_roll_chance": 0.04,
+    "rare_multiplier": 1.10
   },
   "Stone Hoe": {
     "name": "Stone Hoe",
     "emoji": "🌾",
     "type": "tool",
-    "equip_slots": ["farmingTool"]
+    "equip_slots": ["farmingTool"],
+    "tier": "stone",
+    "yield_multiplier": 1.15,
+    "extra_roll_chance": 0.04,
+    "rare_multiplier": 1.10
   },
   "Stone Machete": {
     "name": "Stone Machete",
     "emoji": "🌱",
     "type": "tool",
-    "equip_slots": ["scavengingTool"]
+    "equip_slots": ["scavengingTool"],
+    "tier": "stone",
+    "yield_multiplier": 1.15,
+    "extra_roll_chance": 0.04,
+    "rare_multiplier": 1.10
   }
 }

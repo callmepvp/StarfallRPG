@@ -171,8 +171,7 @@ class RegisterCog(commands.Cog):
             })
             await db.skills.insert_one({
                 "id": user_id,
-                **{f"{sk}{prop}": 0 for sk in ("foraging","mining","farming","crafting","scavenging","fishing", "combat") for prop in ("Level","XP","Bonus")},
-                **{f"{sk}Tier": "1hand" for sk in ("mining","foraging","farming","scavenging","fishing")},
+                **{f"{sk}{prop}": 0 for sk in ("foraging","mining","farming","crafting","scavenging","fishing", "combat") for prop in ("Level","XP","Bonus")}
             })
             await db.collections.insert_one({
                 "id": user_id,
@@ -216,8 +215,8 @@ class RegisterCog(commands.Cog):
                 "chest": None,
                 "legs": None,
                 "feet": None,
-                "mainhand": None,
-                "offhand": None,
+                "mainHand": None,
+                "offHand": None,
                 "accessory1": None,
                 "accessory2": None,
                 # action tools point to instance_ids created above
