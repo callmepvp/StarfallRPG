@@ -40,6 +40,7 @@ _starters = {
 }
 
 ITEM_TEMPLATES_PATH = Path("data/itemTemplates.json")
+QUESTS_FALLBACK_PATH = Path("data/quests/quests.json")
 
 # Load the JSON file
 item_templates: Dict[str, Any] = {}
@@ -48,6 +49,17 @@ if ITEM_TEMPLATES_PATH.exists():
         item_templates = json.load(f)
 else:
     raise FileNotFoundError(f"{ITEM_TEMPLATES_PATH} not found. Make sure it exists!")
+
+# (QUESTS_FALLBACK_PATH is only used in registration fallback if DB doesn't have the quest)
+quest_file_cache: Dict[str, Any] = {}
+if QUESTS_FALLBACK_PATH.exists():
+    with QUESTS_FALLBACK_PATH.open(encoding="utf-8") as f:
+        try:
+            rawq = json.load(f)
+            for q in rawq.get("quests", []):
+                quest_file_cache[q["quest_id"]] = q
+        except Exception:
+            quest_file_cache = {}
 
 class CharacterCustomizationModal(Modal):
     """Modal for choosing your character’s display name and brief bio."""
@@ -167,7 +179,8 @@ class RegisterCog(commands.Cog):
                 "id": user_id,
                 "currentArea": "plains",
                 "currentSubarea": "pond",
-                "subareaType": "small"
+                "subareaType": "small",
+                "lastTravel": int(time.time()) - 86400
             })
             await db.skills.insert_one({
                 "id": user_id,
@@ -234,6 +247,53 @@ class RegisterCog(commands.Cog):
                 # store used short ids for quick uniqueness checks later
                 "used_ids": used_ids_list,
             })
+
+            # ----------------------------
+            # NEW: Initialize player_quests with the first quest active
+            # ----------------------------
+            try:
+                # Use the file-backed quest templates (we do NOT read player templates from db.quests)
+                quest_tpl = quest_file_cache.get("wayfarers_welcome")
+
+                if quest_tpl:
+                    # Build objective progress map: keys like "type:target" => 0
+                    prog_map = {}
+                    for o in quest_tpl.get("objectives", []):
+                        key = f"{o['type']}:{o['target']}"
+                        prog_map[key] = 0
+
+                    player_quests_doc = {
+                        "id": user_id,
+                        "active_quests": {
+                            "wayfarers_welcome": {
+                                "objectives": prog_map,
+                                "status": "active"
+                            }
+                        },
+                        "completed_quests": []
+                    }
+                else:
+                    # If the JSON is missing the template, fall back to an empty per-player record
+                    player_quests_doc = {
+                        "player_id": user_id,
+                        "active_quests": {},
+                        "completed_quests": []
+                    }
+
+                await db.quests.insert_one(player_quests_doc)
+            except Exception as e:
+                # Log but don't crash registration if quests initialization fails
+                print("Warning: failed to initialize player_quests for new user:", e)
+                try:
+                    await db.quests.insert_one({
+                        "player_id": user_id,
+                        "active_quests": {},
+                        "completed_quests": []
+                    })
+                except Exception:
+                    pass
+
+
 
     
             modal = CharacterCustomizationModal(user_id, db)

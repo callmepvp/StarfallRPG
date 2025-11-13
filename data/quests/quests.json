@@ -1,0 +1,64 @@
+{
+  "quests": [
+    {
+      "quest_id": "wayfarers_welcome",
+      "title": "Wayfarer's Welcome",
+      "description": "You begin at the Pond. Make your way to Lynthaven and introduce yourself to Holger the Blacksmith to learn the ropes.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "lynthaven",
+      "objectives": [
+        { "type": "explore", "target": "lynthaven", "amount": 1 },
+        { "type": "talk", "target": "lynthaven_blacksmith", "amount": 1 }
+      ],
+      "rewards": { "gold": [5, 10], "items": [] },
+      "prereqs": [],
+      "next_quest": "timber_for_village"
+    },
+
+    {
+      "quest_id": "timber_for_village",
+      "title": "Timber for the Village",
+      "description": "Lynthaven needs oak to repair some roofs. Forage five units of oak from Lynthaven or the Meadow and return them for a reward.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": null,
+      "objectives": [
+        { "type": "collect", "target": "oak", "amount": 5 }
+      ],
+      "rewards": { "gold": [10, 20], "items": [], "equipment": ["wooden_shield"] },
+      "prereqs": ["wayfarers_welcome"],
+      "next_quest": "first_cast"
+    },
+
+    {
+      "quest_id": "first_cast",
+      "title": "First Cast",
+      "description": "Head back to the Pond and catch a fish to show you can use your skills.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "pond",
+      "objectives": [
+        { "type": "use_skill", "target": "fish", "amount": 1 }
+      ],
+      "rewards": { "gold": [12, 22], "items": ["small_bait"] },
+      "prereqs": ["timber_for_village"],
+      "next_quest": "rabble_at_gates"
+    },
+
+    {
+      "quest_id": "rabble_at_gates",
+      "title": "Rabble at the Gates",
+      "description": "Goblins have been slipping into Lynthaven. Defeat three goblins to help secure the area.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "lynthaven",
+      "objectives": [
+        { "type": "kill", "target": "goblin", "amount": 3 }
+      ],
+      "rewards": { "gold": [18, 35], "items": ["goblin_ear"] },
+      "prereqs": ["first_cast"],
+      "next_quest": null
+    }
+  ]
+}

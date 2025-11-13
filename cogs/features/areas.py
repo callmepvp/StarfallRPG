@@ -3,6 +3,7 @@ from discord import app_commands
 from discord.ext import commands
 from pathlib import Path
 import json
+import datetime
 
 from typing import NoReturn, Optional, Tuple
 
@@ -127,10 +128,13 @@ class AreaCommands(commands.Cog):
     @app_commands.describe(destination="The target sub-area (key like 'pond' or name like 'Pond').")
     async def travel(self, interaction: discord.Interaction, destination: str) -> None:
         """
-        Travel command: validates destination exists and is connected to the user's current sub-area,
-        then updates the user's currentSubarea, currentArea and subareaType in the DB.
+        Travel command with cooldown.
+        Stores lastTravel (epoch seconds) in db.areas per player.
+        Default cooldown: 3600 seconds (1 hour). Change COOLDOWN_SECONDS below to adjust.
         """
-        await interaction.response.defer(thinking=True)  # allows longer processing if needed
+        COOLDOWN_SECONDS = 3600  # 1 hour; change to desired value
+
+        await interaction.response.defer(thinking=True)
         db = self.bot.db  # type: ignore[attr-defined]
         user_id = interaction.user.id
 
@@ -142,7 +146,7 @@ class AreaCommands(commands.Cog):
             )
         dest_area_key, dest_sub_key = dest
 
-        # Fetch user's current location document
+        # Fetch user's current location document (and lastTravel)
         area_doc = await db.areas.find_one({"id": user_id})
         if not area_doc:
             return await interaction.followup.send(
@@ -154,6 +158,20 @@ class AreaCommands(commands.Cog):
         if not current_area_key or not current_sub_key:
             return await interaction.followup.send(
                 "❌ You're not in a valid area or sub-area!", ephemeral=True
+            )
+
+        # COOLDOWN CHECK
+        now_ts = int(datetime.datetime.utcnow().timestamp())
+        last_travel_ts = int(area_doc.get("lastTravel", 0) or 0)
+        elapsed = now_ts - last_travel_ts
+        if elapsed < COOLDOWN_SECONDS:
+            remaining = COOLDOWN_SECONDS - elapsed
+            mins = remaining // 60
+            secs = remaining % 60
+            time_str = f"{mins}m{secs}s" if mins > 0 else f"{secs}s"
+            return await interaction.followup.send(
+                f"⏳ You can't travel yet. Time until next travel: **{time_str}**.",
+                ephemeral=True
             )
 
         # If already there
@@ -204,7 +222,8 @@ class AreaCommands(commands.Cog):
             {"$set": {
                 "currentArea": dest_area_key,
                 "currentSubarea": dest_sub_key,
-                "subareaType": subarea_type
+                "subareaType": subarea_type,
+                "lastTravel": now_ts  # record travel time for cooldown
             }}
         )
 
@@ -223,8 +242,35 @@ class AreaCommands(commands.Cog):
         if dest_sub.get("resources"):
             embed.add_field(name="🪵 Resources", value=", ".join(x.capitalize() for x in dest_sub["resources"]), inline=False)
 
+        # Helpful footer showing cooldown length (human readable)
+        cd_minutes = COOLDOWN_SECONDS // 60
+        embed.set_footer(text=f"Travel cooldown: {cd_minutes} minute(s)")
+
         await interaction.followup.send(embed=embed)
-    
+
+        # --- Quest progress updates ---
+        try:
+            quest_cog: Optional[commands.Cog] = self.bot.get_cog("QuestCog")
+            if quest_cog:
+                completions = await quest_cog.update_progress(
+                    user_id,
+                    objective_type="explore",
+                    target=dest_sub_key,
+                    amount=1
+                )
+                if completions:
+                    # Build a friendly quest update message
+                    lines = []
+                    for comp in completions:
+                        tpl = comp["template"]
+                        title = tpl.get("title", comp["quest_id"])
+                        lines.append(f"✅ Quest completed: **{title}**")
+                    
+                    await interaction.followup.send(
+                        "\n".join(lines), ephemeral=True
+                    )
+        except Exception as e:
+            print(f"[WARN] Failed to update travel quest progress: {e}")
 
 async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID

@@ -13,10 +13,10 @@
         "image": "url_to_pond_image",
         "mobs": [],
         "resources": ["rubber duck", "boot", "seaweed", "perch", "cod", "trout", "oak"],
-        "connections": ["village1", "meadow"]
+        "connections": ["lynthaven", "meadow"]
       },
-      "village1": {
-        "name": "Village 1",
+      "lynthaven": {
+        "name": "Lynthaven",
         "type": "small",
         "lore": "A humble village where travelers rest and villagers live simple lives.",
         "image": "url_to_village1_image",
@@ -31,7 +31,7 @@
         "image": "url_to_meadow_image",
         "mobs": ["plains_coyote", "mudback_boar"],
         "resources": ["oak", "silverleaf", "needlegrass", "stone", "coal"],
-        "connections": ["pond", "village1", "village2"]
+        "connections": ["pond", "lynthaven", "emberveil"]
       },
       "well": {
         "name": "Well",
@@ -40,7 +40,7 @@
         "image": "url_to_well_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village1", "church"]
+        "connections": ["lynthaven", "church"]
       },
       "church": {
         "name": "Church",
@@ -49,10 +49,10 @@
         "image": "url_to_church_image",
         "mobs": [],
         "resources": [],
-        "connections": ["well", "village2"]
+        "connections": ["well", "emberveil"]
       },
-      "village2": {
-        "name": "Village 2",
+      "emberveil": {
+        "name": "Emberveil",
         "type": "large",
         "lore": "A larger, bustling village with markets and a cathedral at its center.",
         "image": "url_to_village2_image",
@@ -67,7 +67,7 @@
         "image": "url_to_cathedral_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village2", "market"]
+        "connections": ["emberveil", "market"]
       },
       "market": {
         "name": "Market",
@@ -76,7 +76,7 @@
         "image": "url_to_market_image",
         "mobs": [],
         "resources": [],
-        "connections": ["village2", "cathedral"]
+        "connections": ["emberveil", "cathedral"]
       }
     }
   }

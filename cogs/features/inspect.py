@@ -123,7 +123,6 @@ class InspectCog(commands.Cog):
             f"❌ Item or instance '{item_name}' does not exist.", ephemeral=True
         )
 
-
 async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID
     await bot.add_cog(InspectCog(bot), guilds=[discord.Object(id=GUILD_ID)])

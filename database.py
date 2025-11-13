@@ -33,6 +33,7 @@ class Database:
         self.recipes: Optional[AsyncIOMotorCollection] = None
         self.areas: Optional[AsyncIOMotorCollection] = None
         self.equipment: Optional[AsyncIOMotorCollection] = None
+        self.quests: Optional[AsyncIOMotorCollection] = None
 
     async def connect(self, max_retries: int = 3, backoff_seconds: float = 0.5) -> bool:
         """
@@ -55,6 +56,7 @@ class Database:
                 self.recipes = self.db["recipes"]
                 self.areas = self.db["areas"]
                 self.equipment = self.db["equipment"]
+                self.quests = self.db["quests"]
                 logger.info("Connected to MongoDB (database=%s)", self._db_name)
                 return True
             except Exception as exc:

@@ -21,7 +21,8 @@ class Remove(commands.Cog):
             self.db.collections,
             self.db.recipes,
             self.db.areas,
-            self.db.equipment
+            self.db.equipment,
+            self.db.quests
         ]
 
     @app_commands.command(

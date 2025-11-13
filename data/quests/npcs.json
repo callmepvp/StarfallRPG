@@ -1,0 +1,30 @@
+{
+  "lynthaven_blacksmith": {
+    "name": "Holger the Blacksmith",
+    "sub_area": "lynthaven",
+    "dialogue": {
+      "start": {
+        "text": "Greetings, traveler! What brings you here?",
+        "options": [
+          {"label": "Ask about tools", "next": "tools_info"},
+          {"label": "Shop", "action": "shop"},
+          {"label": "Say goodbye", "next": "end"}
+        ]
+      },
+      "tools_info": {
+        "text": "I craft weapons and tools. Always looking for good ore.",
+        "options": [
+          {"label": "Shop", "action": "shop"},
+          {"label": "Back", "next": "start"}
+        ]
+      },
+      "end": {
+        "text": "Farewell, traveler!",
+        "options": []
+      }
+    },
+    "shop_items": {
+      "iron": 50
+    }
+  }
+}
