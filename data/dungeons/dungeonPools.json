@@ -1,0 +1,33 @@
+{
+  "floor_1": {
+    "mobs": ["skeleton_grunt", "skeleton_archer"],
+    "puzzles": [
+      {
+        "id": "lever_choice",
+        "description": "Choose the correct lever to open the next door.",
+        "success": {"score": 10},
+        "failure": {"score": -5}
+      },
+      {
+        "id": "symbol_match",
+        "description": "Match the symbols on the floor tiles to proceed.",
+        "success": {"score": 12},
+        "failure": {"score": -6}
+      }
+    ],
+    "traps": [
+      {
+        "id": "chest_trap",
+        "description": "You see a chest in the corner. Open it?",
+        "success": {"gold": [10, 20]},
+        "failure": {"damage": 15, "stamina_loss": 2}
+      },
+      {
+        "id": "spike_floor",
+        "description": "A suspicious floor panel ahead. Step carefully?",
+        "success": {"score": 8},
+        "failure": {"damage": 20}
+      }
+    ]
+  }
+}

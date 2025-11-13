@@ -1,0 +1,11 @@
+{
+  "floors": {
+    "1": {
+      "rooms": [
+        {"type": "combat", "mob_count": 2},
+        {"type": "puzzle"},
+        {"type": "trap_decision"}
+      ]
+    }
+  }
+}
