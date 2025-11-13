@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import View, Button
+from discord.ui import View, Button, Select
 
 # --- Load dungeon & mob data ---
 _FLOORS_PATH = Path("data/dungeons/dungeonFloors.json")
@@ -23,6 +23,79 @@ if _POOLS_PATH.exists():
     dungeon_pools = json.loads(_POOLS_PATH.read_text(encoding="utf-8"))
 if _DUNGEON_MOBS_PATH.exists():
     dungeon_mobs = json.loads(_DUNGEON_MOBS_PATH.read_text(encoding="utf-8"))
+
+# Focus Skills Configuration
+FOCUS_SKILLS = {
+    "quick_heal": {
+        "name": "Quick Heal",
+        "description": "Heal 15% of your max HP",
+        "cost": 30,
+        "emoji": "💚"
+    },
+    "counter_ready": {
+        "name": "Counter Ready", 
+        "description": "Negate all damage next turn and counter for 150% damage",
+        "cost": 100,
+        "emoji": "🔄"
+    },
+    "prepared_strike": {
+        "name": "Prepared Strike",
+        "description": "Next attack can't be dodged and deals 50% more damage",
+        "cost": 60,
+        "emoji": "🎯"
+    },
+    "focused_defense": {
+        "name": "Focused Defense",
+        "description": "Take 75% less damage this turn and gain double focus",
+        "cost": 40,
+        "emoji": "🔰"
+    },
+    "desperate_attack": {
+        "name": "Desperate Attack",
+        "description": "Deal damage equal to 50% of missing HP (min: 10, max: 50)",
+        "cost": 80,
+        "emoji": "💥"
+    }
+}
+
+class FocusSkillSelect(Select):
+    def __init__(self, combat_view: 'DungeonCombatView'):
+        self.combat_view = combat_view
+        
+        options = []
+        for skill_id, skill_data in FOCUS_SKILLS.items():
+            # Remove the 'disabled' parameter since it's not available in older discord.py versions
+            option = discord.SelectOption(
+                label=f"{skill_data['emoji']} {skill_data['name']}",
+                description=f"{skill_data['description']} - Cost: {skill_data['cost']}",
+                value=skill_id,
+                emoji=skill_data["emoji"]
+            )
+            options.append(option)
+        
+        super().__init__(
+            placeholder="🎯 Choose a Focus Skill...",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.user.id != self.combat_view.user_id:
+            return await interaction.response.send_message("This isn't your combat!", ephemeral=True)
+        
+        skill_id = self.values[0]
+        skill_data = FOCUS_SKILLS[skill_id]
+        
+        # Check if player can afford
+        if self.combat_view.player_focus < skill_data["cost"]:
+            return await interaction.response.send_message(
+                f"❌ Not enough focus! You need {skill_data['cost']} focus for {skill_data['name']}.",
+                ephemeral=True
+            )
+        
+        # Apply skill effects
+        await self.combat_view.process_focus_skill(interaction, skill_id, skill_data)
 
 class DungeonCog(commands.Cog):
     """Solo dungeon exploration system"""
@@ -352,6 +425,16 @@ class DungeonCombatView(View):
         self.combat_log = []
         self.player_focus = 0  # Focus meter for the combat
         self.player_is_defending = False  # Track if player defended this turn
+        
+        # Focus skill states
+        self.active_effects = {
+            "counter_ready": False,
+            "prepared_strike": False,
+            "focused_defense": False
+        }
+        
+        # Add focus skills dropdown
+        self.add_item(FocusSkillSelect(self))
 
     async def on_timeout(self):
         """Handle view timeout - treat as fleeing"""
@@ -375,7 +458,17 @@ class DungeonCombatView(View):
         player_info = f"❤️ HP: {self.player_stats['current_hp']}/{self.player_stats['max_hp']}\n"
         player_info += f"💪 STR: {self.player_stats['str']}\n"
         player_info += f"🛡️ DEF: {self.player_stats['def']}\n"
-        player_info += f"🎯 Focus: {self.player_focus}/100"  # Focus meter
+        player_info += f"🎯 Focus: {self.player_focus}/100\n"
+        
+        # Add active effects
+        active_effects = []
+        for effect, active in self.active_effects.items():
+            if active:
+                effect_name = FOCUS_SKILLS.get(effect, {}).get("name", effect)
+                active_effects.append(f"✨ {effect_name}")
+        
+        if active_effects:
+            player_info += "Active: " + ", ".join(active_effects)
         
         embed.add_field(
             name="👤 Player",
@@ -404,14 +497,56 @@ class DungeonCombatView(View):
             inline=True
         )
         
-        # Combat log
+        # Combat log - CHANGED: Show last 5 actions instead of 3
         if self.combat_log:
-            log_text = "\n".join(self.combat_log[-3:])  # Show last 3 actions
+            log_text = "\n".join(self.combat_log[-5:])  # Show last 5 actions
             embed.add_field(name="📜 Combat Log", value=log_text, inline=False)
         else:
             embed.add_field(name="📜 Combat Log", value="Combat started! Choose an action.", inline=False)
         
         return embed
+
+    async def process_focus_skill(self, interaction: discord.Interaction, skill_id: str, skill_data: Dict[str, Any]):
+        """Process focus skill usage"""
+        # Deduct focus cost
+        self.player_focus -= skill_data["cost"]
+        
+        if skill_id == "quick_heal":
+            heal_amount = max(1, int(self.player_stats["max_hp"] * 0.15))
+            self.player_stats["current_hp"] = min(
+                self.player_stats["max_hp"], 
+                self.player_stats["current_hp"] + heal_amount
+            )
+            self.combat_log.append(f"💚 Quick Heal! Recovered **{heal_amount}** HP.")
+            await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
+            
+        elif skill_id == "counter_ready":
+            self.active_effects["counter_ready"] = True
+            self.combat_log.append(f"🔄 Counter Ready! Next attack will be negated and countered!")
+            
+        elif skill_id == "prepared_strike":
+            self.active_effects["prepared_strike"] = True
+            self.combat_log.append(f"🎯 Prepared Strike! Your next attack can't be dodged and deals extra damage!")
+            
+        elif skill_id == "focused_defense":
+            self.active_effects["focused_defense"] = True
+            self.combat_log.append(f"🔰 Focused Defense! You'll take much less damage this turn!")
+            
+        elif skill_id == "desperate_attack":
+            missing_hp = self.player_stats["max_hp"] - self.player_stats["current_hp"]
+            damage = max(10, min(50, int(missing_hp * 0.5)))
+            current_mob = self.mobs[self.current_mob_index]
+            current_mob["current_hp"] -= damage
+            self.combat_log.append(f"💥 Desperate Attack! Deals **{damage}** damage based on your missing HP!")
+            
+            # Check if mob died
+            if current_mob["current_hp"] <= 0:
+                await self.handle_mob_defeated(interaction, current_mob)
+                return
+        
+        # Update the combat display
+        embed = self.create_combat_embed()
+        await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(label="Attack", style=discord.ButtonStyle.danger, emoji="⚔️")
     async def attack_button(self, interaction: discord.Interaction, button: Button):
@@ -448,13 +583,22 @@ class DungeonCombatView(View):
         # Player attacks mob
         player_damage = self.calculate_damage(self.player_stats, current_mob["stats"])
         
+        # Apply prepared strike bonus
+        if self.active_effects["prepared_strike"]:
+            player_damage = int(player_damage * 1.5)
+            self.combat_log.append(f"🎯 Prepared Strike activates! Attack deals extra damage!")
+            self.active_effects["prepared_strike"] = False
+        
         # Reduce damage if mob is defending
-        if mob_defending:
+        if mob_defending and not self.active_effects["prepared_strike"]:
             player_damage = max(1, player_damage // 2)
             self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage (reduced by defense)!")
             current_mob['is_defending'] = False  # Mob stops defending after being hit
         else:
-            self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage!")
+            if self.active_effects["prepared_strike"]:
+                self.combat_log.append(f"⚔️ Your attack can't be dodged! You hit {current_mob['name']} for **{player_damage}** damage!")
+            else:
+                self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage!")
         
         current_mob["current_hp"] -= player_damage
         
@@ -462,6 +606,29 @@ class DungeonCombatView(View):
         if current_mob["current_hp"] <= 0:
             await self.handle_mob_defeated(interaction, current_mob)
             return
+        
+        # If Counter Ready is active and mob has a telegraphed attack ready to execute, trigger it now
+        if (self.active_effects["counter_ready"] and 
+            current_mob.get('telegraphed_attack') and 
+            current_mob.get('telegraph_turns', 0) <= 0):
+            
+            # Execute the counter against the special attack
+            counter_damage = int(self.calculate_damage(self.player_stats, current_mob["stats"]) * 1.5)
+            current_mob["current_hp"] -= counter_damage
+            self.combat_log.append(f"🔄 Counter Ready activates! You negate {current_mob['name']}'s {current_mob['telegraphed_attack']['name']} and counter for **{counter_damage}** damage!")
+            self.active_effects["counter_ready"] = False
+            
+            # Clear the mob's special attack since it was countered
+            current_mob['telegraphed_attack'] = None
+            current_mob['telegraph_turns'] = 0
+            
+            # Check if counter killed the mob
+            if current_mob["current_hp"] <= 0:
+                await self.handle_mob_defeated(interaction, current_mob)
+                return
+            else:
+                await self.check_combat_status(interaction)
+                return
         
         # Mob's turn
         await self.process_mob_turn(interaction)
@@ -471,8 +638,13 @@ class DungeonCombatView(View):
         current_mob = self.mobs[self.current_mob_index]
         self.player_is_defending = True
         
-        # Gain focus for defending
+        # Gain focus for defending (double if focused defense is active)
         focus_gain = 15
+        if self.active_effects["focused_defense"]:
+            focus_gain *= 2
+            self.combat_log.append(f"🔰 Focused Defense! This gives you double focus!")
+            self.active_effects["focused_defense"] = False
+        
         self.player_focus = min(100, self.player_focus + focus_gain)
         self.combat_log.append(f"🛡️ You brace for impact! Gained **{focus_gain}** focus.")
         
@@ -489,12 +661,46 @@ class DungeonCombatView(View):
             current_mob['telegraph_turns'] = turns_left
             
             if turns_left <= 0:
-                # Execute telegraphed attack
-                await self.execute_telegraphed_attack(interaction, current_mob)
-                return
+                # Check for Counter Ready before executing special attack
+                if self.active_effects["counter_ready"]:
+                    counter_damage = int(self.calculate_damage(self.player_stats, current_mob["stats"]) * 1.5)
+                    current_mob["current_hp"] -= counter_damage
+                    self.combat_log.append(f"🔄 Counter Ready activates! You negate {current_mob['name']}'s {current_mob['telegraphed_attack']['name']} and counter for **{counter_damage}** damage!")
+                    self.active_effects["counter_ready"] = False
+                    
+                    # Clear the special attack since it was countered
+                    current_mob['telegraphed_attack'] = None
+                    current_mob['telegraph_turns'] = 0
+                    
+                    # Check if counter killed the mob
+                    if current_mob["current_hp"] <= 0:
+                        await self.handle_mob_defeated(interaction, current_mob)
+                        return
+                    else:
+                        await self.check_combat_status(interaction)
+                        return
+                else:
+                    # Execute telegraphed attack normally
+                    await self.execute_telegraphed_attack(interaction, current_mob)
+                    return
             else:
                 self.combat_log.append(f"⚡ {current_mob['name']} is charging {current_mob['telegraphed_attack']['name']}... ({turns_left} turns left)")
                 # Mob doesn't do anything else while charging special attack
+                await self.check_combat_status(interaction)
+                return
+        
+        # Check for Counter Ready on normal attacks
+        if self.active_effects["counter_ready"]:
+            counter_damage = int(self.calculate_damage(self.player_stats, current_mob["stats"]) * 1.5)
+            current_mob["current_hp"] -= counter_damage
+            self.combat_log.append(f"🔄 Counter Ready activates! You negate {current_mob['name']}'s attack and counter for **{counter_damage}** damage!")
+            self.active_effects["counter_ready"] = False
+            
+            # Check if counter killed the mob
+            if current_mob["current_hp"] <= 0:
+                await self.handle_mob_defeated(interaction, current_mob)
+                return
+            else:
                 await self.check_combat_status(interaction)
                 return
         
@@ -530,21 +736,44 @@ class DungeonCombatView(View):
 
     async def start_mob_special_attack(self, interaction: discord.Interaction, mob: Dict[str, Any]):
         """Start a telegraphed special attack for the mob"""
-        special_attacks = mob.get('special_attacks', [])
-        if not special_attacks:
-            special_attack = {
+        # Define possible special attacks based on mob type
+        special_attacks = {
+            'skeleton_grunt': {
+                'name': 'Bone Crusher',
+                'telegraph_turns': 2,
+                'damage_multiplier': 2.5,
+                'description': 'winds up for a powerful bone-crushing strike!'
+            },
+            'skeleton_archer': {
+                'name': 'Precise Shot', 
+                'telegraph_turns': 1,
+                'damage_multiplier': 2.0,
+                'description': 'takes careful aim for a precise shot!'
+            }
+        }
+        
+        mob_key = None
+        for key, data in dungeon_mobs.items():
+            if data['name'] == mob['name']:
+                mob_key = key
+                break
+        
+        if mob_key and mob_key in special_attacks:
+            special_attack = special_attacks[mob_key]
+            mob['telegraphed_attack'] = special_attack
+            mob['telegraph_turns'] = special_attack['telegraph_turns']
+            self.combat_log.append(f"⚡ {mob['name']} {special_attack['description']}")
+        else:
+            # Default special attack
+            mob['telegraphed_attack'] = {
                 'name': 'Power Attack',
                 'telegraph_turns': 1,
                 'damage_multiplier': 2.0,
                 'description': 'charges up a powerful attack!'
             }
-        else:
-            special_attack = random.choice(special_attacks)
-
-        mob['telegraphed_attack'] = special_attack
-        mob['telegraph_turns'] = special_attack['telegraph_turns']
-        self.combat_log.append(f"⚡ {mob['name']} {special_attack['description']}")
-
+            mob['telegraph_turns'] = 1
+            self.combat_log.append(f"⚡ {mob['name']} charges up a powerful attack!")
+        
         await self.check_combat_status(interaction)
 
     async def execute_telegraphed_attack(self, interaction: discord.Interaction, mob: Dict[str, Any]):
@@ -553,8 +782,29 @@ class DungeonCombatView(View):
         base_damage = self.calculate_damage(mob["stats"], self.player_stats)
         special_damage = int(base_damage * special_attack['damage_multiplier'])
         
+        # Check for Counter Ready first - FIXED: Counter Ready should negate ALL damage
+        if self.active_effects["counter_ready"]:
+            counter_damage = int(self.calculate_damage(self.player_stats, mob["stats"]) * 1.5)
+            mob["current_hp"] -= counter_damage
+            self.combat_log.append(f"🔄 Counter Ready activates! You negate {mob['name']}'s {special_attack['name']} and counter for **{counter_damage}** damage!")
+            self.active_effects["counter_ready"] = False
+            
+            # Check if counter killed the mob
+            if mob["current_hp"] <= 0:
+                await self.handle_mob_defeated(interaction, mob)
+                return
+            else:
+                await self.check_combat_status(interaction)
+                return
+        
+        # Apply focused defense reduction
+        if self.active_effects["focused_defense"]:
+            special_damage = max(1, special_damage // 4)
+            self.combat_log.append(f"🔰 Focused Defense reduces the damage!")
+            self.active_effects["focused_defense"] = False
+        
         # Check if player defended at the right time
-        if self.player_is_defending:
+        if self.player_is_defending and not self.active_effects["focused_defense"]:
             # Successful defend - greatly reduce damage
             special_damage = max(1, special_damage // 4)
             self.combat_log.append(f"💥 {mob['name']} uses **{special_attack['name']}** for **{special_damage}** damage (defended)!")
@@ -567,7 +817,7 @@ class DungeonCombatView(View):
             special_damage = int(special_damage)
             self.combat_log.append(f"💥 {mob['name']} uses **{special_attack['name']}** for **{special_damage}** damage!")
             # 50% chance to stun if not defended
-            if random.random() < 0.5:
+            if random.random() < 0.5 and not self.active_effects["focused_defense"]:
                 self.combat_log.append("😵 You are **stunned** and will be vulnerable next turn!")
                 # Stun effect could be implemented here
         
@@ -586,8 +836,29 @@ class DungeonCombatView(View):
         
         mob_damage = self.calculate_damage(current_mob["stats"], self.player_stats)
         
-        # Check if player is defending
-        if self.player_is_defending:
+        # Check for Counter Ready first - FIXED: Counter Ready should negate ALL damage
+        if self.active_effects["counter_ready"]:
+            counter_damage = int(self.calculate_damage(self.player_stats, current_mob["stats"]) * 1.5)
+            current_mob["current_hp"] -= counter_damage
+            self.combat_log.append(f"🔄 Counter Ready activates! You negate {current_mob['name']}'s attack and counter for **{counter_damage}** damage!")
+            self.active_effects["counter_ready"] = False
+            
+            # Check if counter killed the mob
+            if current_mob["current_hp"] <= 0:
+                await self.handle_mob_defeated(interaction, current_mob)
+                return
+            else:
+                await self.check_combat_status(interaction)
+                return
+        
+        # Apply focused defense reduction
+        if self.active_effects["focused_defense"]:
+            mob_damage = max(1, mob_damage // 4)
+            self.combat_log.append(f"🔰 Focused Defense reduces the damage!")
+            self.active_effects["focused_defense"] = False
+        
+        # Check if player is defending (and not already using focused defense)
+        if self.player_is_defending and not self.active_effects["focused_defense"]:
             mob_damage = max(1, mob_damage // 2)
             self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage (reduced)!")
             # Gain focus for successful defense
