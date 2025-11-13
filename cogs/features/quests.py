@@ -149,12 +149,15 @@ class QuestCog(commands.Cog):
         else:
             embed.add_field(name="✅ Completed Quests", value="None", inline=False)
 
-        # Available templates (from JSON) — show nicer sub-area names when possible
+        # Available quests
         templates = await self.list_templates()
         avail_lines: List[str] = []
         for tpl in templates:
             qid = tpl["quest_id"]
             if qid in completed or qid in active:
+                continue
+            # Skip quests that are npc_given
+            if tpl.get("npc_given", False):
                 continue
             prereqs = set(tpl.get("prereqs", []))
             if prereqs - completed:

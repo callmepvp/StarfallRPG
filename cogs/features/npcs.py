@@ -42,21 +42,30 @@ class NPCDialogueView(View):
 
         for opt in options:
             label = opt.get("label", "…")
-            if opt.get("action") == "shop":
+
+            # --- Quest Button ---
+            if opt.get("action") == "give_quest" and "quest_id" in opt:
+                quest_id = opt["quest_id"]
                 btn = Button(label=label, style=discord.ButtonStyle.success)
-                async def shop_cb(inter: discord.Interaction, _opt=opt, _node=node_key):
-                    embed = discord.Embed(
-                        title=f"{self.npc_data.get('name','NPC')} — Shop (Placeholder)",
-                        description=_opt.get("shop_text", "This shop is under construction."),
-                        color=discord.Color.green()
-                    )
-                    shop_items = self.npc_data.get("shop_items", {})
-                    if shop_items:
-                        shop_lines = [f"• {k.replace('_',' ').title()} — {v} gold" for k, v in shop_items.items()]
-                        embed.add_field(name="Items", value="\n".join(shop_lines), inline=False)
-                    self._rebuild_buttons_for_node(_node)
-                    await inter.response.edit_message(embed=embed, view=self)
-                btn.callback = shop_cb
+
+                async def quest_cb(inter: discord.Interaction, qid=quest_id, _btn=btn):
+                    quest_cog = inter.client.get_cog("QuestCog")
+                    if not quest_cog:
+                        return await inter.response.send_message("❌ Quest system unavailable.", ephemeral=True)
+
+                    tpl = await quest_cog.get_template(quest_id)
+                    quest_title = tpl.get("title", quest_id) if tpl else quest_id
+
+                    success = await quest_cog.accept_for_player(inter.user.id, quest_id)
+                    if success:
+                        # Disable the button so it cannot be clicked again
+                        _btn.disabled = True
+                        await inter.response.edit_message(view=self)
+                        await inter.followup.send(f"🟢 Quest accepted: **{quest_title}**", ephemeral=True)
+                    else:
+                        await inter.response.send_message(f"⚠️ You already have or completed the quest **{quest_title}**.", ephemeral=True)
+
+                btn.callback = quest_cb
                 self.add_item(btn)
                 continue
 

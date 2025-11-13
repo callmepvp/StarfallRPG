@@ -11,7 +11,7 @@
         { "type": "explore", "target": "lynthaven", "amount": 1 },
         { "type": "talk", "target": "lynthaven_blacksmith", "amount": 1 }
       ],
-      "rewards": { "gold": [5, 10], "items": [] },
+      "rewards": { "gold": [5, 10], "items": [], "equipment": [] },
       "prereqs": [],
       "next_quest": "blacksmith_tutorial_1"
     },
@@ -28,6 +28,21 @@
       "rewards": { "gold": [50, 100], "items": [], "equipment": [] },
       "prereqs": ["wayfarers_welcome"],
       "next_quest": null
+    },
+    {
+      "quest_id": "pond_fishing_intro",
+      "title": "First Cast",
+      "description": "A friendly fisher at the Pond offers you a simple task: catch 5 fish to learn the basics of fishing.",
+      "type": "side",
+      "area": "plains",
+      "sub_area": "pond",
+      "objectives": [
+        { "type": "collect", "target": "fish", "amount": 5 }
+      ],
+      "rewards": { "gold": [10, 20], "items": [], "equipment": [] },
+      "prereqs": [],
+      "next_quest": null,
+      "npc_given": true
     }
   ]
 }

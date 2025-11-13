@@ -79,5 +79,145 @@
     },
     "shop_items": {
     }
+  },
+
+  "lynthaven_girl": {
+    "name": "Mira, the Quiet Girl",
+    "sub_area": "lynthaven",
+    "dialogue": {
+      "start": {
+        "text": "The girl glances at you, but says nothing.",
+        "options": [
+          {
+            "label": "Ask about the town",
+            "next": "town"
+          },
+          {
+            "label": "Say goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "town": {
+        "text": "She shrugs, pointing vaguely toward the blacksmith and the fountain.",
+        "options": [
+          {
+            "label": "Thank her",
+            "next": "end"
+          }
+        ]
+      }
+    }
+  },
+
+  "lynthaven_medic": {
+    "name": "Selena, the Town Medic",
+    "sub_area": "lynthaven",
+    "dialogue": {
+      "start": {
+        "text": "'Welcome, traveler. I can teach you about health and stamina, and what happens when you fall in battle.'",
+        "options": [
+          {
+            "label": "How does stamina work?",
+            "next": "stamina"
+          },
+          {
+            "label": "What happens when I die?",
+            "next": "death"
+          },
+          {
+            "label": "Any advice about the town?",
+            "next": "lore"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "stamina": {
+        "text": "'Stamina is your energy for actions. It regenerates slowly over time, so pacing yourself is important. Resting can speed it up.'",
+        "options": [
+          {
+            "label": "Thanks",
+            "next": "start"
+          }
+        ]
+      },
+      "death": {
+        "text": "'When you die, you lose some gold and might drop items. Be careful! But don't worry, death isn't permanent, you can always continue your journey.'",
+        "options": [
+          {
+            "label": "Got it",
+            "next": "start"
+          }
+        ]
+      },
+      "lore": {
+        "text": "'Lynthaven has stood for generations as a small trading hub. Travelers and craftsmen come here to exchange goods and knowledge.'",
+        "options": [
+          {
+            "label": "Interesting",
+            "next": "start"
+          }
+        ]
+      }
+    }
+  },
+
+  "pond_fisher": {
+    "name": "Old Man Fisher",
+    "sub_area": "pond",
+    "dialogue": {
+      "start": {
+        "text": "'Ah, hello there! The waters are calm today. Care to try your hand at fishing?'",
+        "lore": "He’s been fishing these waters for decades. His hands are weathered, but his eyes sparkle with the love for the river.",
+        "options": [
+          {
+            "label": "Teach me to fish",
+            "next": "fishing_intro"
+          },
+          {
+            "label": "Hear a story about the pond",
+            "next": "pond_lore"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "fishing_intro": {
+        "text": "'Fishing is simple, but patience is key. Catch 5 fish and you’ll learn the basics. Use your basic wooden fishing rod.'",
+        "lore": "The old man pats your back and gives a soft smile.",
+        "options": [
+          {
+            "label": "Accept the fishing challenge",
+            "next": "end",
+            "action": "give_quest",
+            "quest_id": "pond_fishing_intro"
+          },
+          {
+            "label": "Maybe later",
+            "next": "end"
+          }
+        ]
+      },
+      "pond_lore": {
+        "text": "'This pond has been here longer than anyone can remember. Strange lights sometimes appear at night, they say the water spirits dance.'",
+        "lore": "Old stories tell of travelers who vanished near the pond, though no one knows what truly happened.",
+        "options": [
+          {
+            "label": "Fascinating",
+            "next": "start"
+          }
+        ]
+      },
+      "end": {
+        "text": "Farewell, traveler. May your hooks always find a bite.",
+        "options": []
+      }
+    }
   }
+
 }
