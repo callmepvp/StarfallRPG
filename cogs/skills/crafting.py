@@ -80,6 +80,13 @@ class CraftingCog(commands.Cog):
         profile = await self.get_regen_user(user_id)
         if not profile:
             return False, "❌ You need to `/register` first!", 0
+        
+        if profile.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
+        
         if profile.get("stamina", 0) <= 0:
             return False, "😴 Not enough stamina to craft right now.", 0
 

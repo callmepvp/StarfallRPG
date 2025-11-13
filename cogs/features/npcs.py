@@ -17,9 +17,6 @@ if _NPCS_PATH.exists():
     except Exception:
         _npcs_data = {}
 
-def _titleize_key(key: str) -> str:
-    return key.replace("_", " ").title()
-
 class NPCDialogueView(View):
     def __init__(self, npc_id: str, npc_data: Dict[str, Any], user_id: int, timeout: float = 300.0):
         super().__init__(timeout=timeout)
@@ -180,6 +177,19 @@ class NPCCog(commands.Cog):
     async def talk(self, interaction: discord.Interaction) -> None:
         db = self.bot.db
         user_id = interaction.user.id
+
+        player = await db.general.find_one({"id": user_id})
+        if not player:
+            return await interaction.response.send_message(
+                "❌ You need to `/register` before you can talk to NPCs!", 
+                ephemeral=True
+            )
+
+        if player.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't talk to NPCs while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
 
         area_doc = await db.areas.find_one({"id": user_id})
         if not area_doc:

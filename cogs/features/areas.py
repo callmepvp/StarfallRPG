@@ -135,8 +135,21 @@ class AreaCommands(commands.Cog):
         COOLDOWN_SECONDS = 3600  # 1 hour; change to desired value
 
         await interaction.response.defer(thinking=True)
-        db = self.bot.db  # type: ignore[attr-defined]
+        db = self.bot.db
         user_id = interaction.user.id
+        
+        player = await db.general.find_one({"id": user_id})
+        if not player:
+            return await interaction.followup.send(
+                "❌ You need to `/register` before you can travel!", 
+                ephemeral=True
+            )
+
+        if player.get("inDungeon", False):
+            return await interaction.followup.send(
+                "❌ You can't travel while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
 
         # Resolve destination to (area_key, sub_key)
         dest = find_subarea_by_key_or_name(destination)

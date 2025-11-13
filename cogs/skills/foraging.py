@@ -57,6 +57,13 @@ class ForagingCog(commands.Cog):
         profile = await self.get_regen_user(user_id)
         if not profile:
             return await interaction.response.send_message("❌ You need to `/register` before foraging!", ephemeral=True)
+        
+        if profile.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
+        
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message("😴 You’re out of stamina! Rest before foraging again.", ephemeral=True)
 

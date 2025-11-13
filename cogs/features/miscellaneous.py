@@ -42,6 +42,12 @@ class MiscCommandCog(commands.Cog):
             return await interaction.response.send_message(
                 "❌ You need to `/register` before you can rest.", ephemeral=True
             )
+        
+        if user.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
 
         current_hp = user.get("hp", 100)
         max_hp = user.get("maxHP", 100)

@@ -71,6 +71,13 @@ class FishingCog(commands.Cog):
                 "❌ Please `/register` before you head out to fish!",
                 ephemeral=True
             )
+        
+        if profile.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
+        
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message(
                 "😴 You’re out of stamina! Rest or boost before fishing again.",

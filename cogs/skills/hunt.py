@@ -167,6 +167,12 @@ class CombatCog(commands.Cog):
                 ephemeral=True
             )
         
+        if profile.get("inDungeon", False):
+            return await interaction.response.send_message(
+                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
+                ephemeral=True
+            )
+        
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message(
                 "😴 You're too exhausted to hunt! Rest or use a stamina potion.",
