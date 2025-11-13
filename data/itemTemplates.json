@@ -5,6 +5,7 @@
     "type": "tool",
     "equip_slots": ["fishingTool"],
     "tier": "wood",
+    "description": "A simple wooden rod with a line attached. Surprisingly effective for catching fish, despite looking like a stick.",
     "stats": {
       "yield_multiplier": 1.00,
       "extra_roll_chance": 0.02,
@@ -17,6 +18,7 @@
     "type": "tool",
     "equip_slots": ["miningTool"],
     "tier": "wood",
+    "description": "A wooden pickaxe that's actually held together by hope and determination. Don't swing too hard or it might splinter.",
     "stats": {
       "yield_multiplier": 1.00,
       "extra_roll_chance": 0.02,
@@ -29,6 +31,7 @@
     "type": "tool",
     "equip_slots": ["foragingTool"],
     "tier": "wood",
+    "description": "An axe made of wood. The irony is not lost on anyone who uses it.",
     "stats": {
       "yield_multiplier": 1.00,
       "extra_roll_chance": 0.02,
@@ -41,6 +44,7 @@
     "type": "tool",
     "equip_slots": ["farmingTool"],
     "tier": "wood",
+    "description": "A trusty wooden hoe for tilling soil and harvesting crops. Farmers have sworn by this design for generations, mostly out of necessity.",
     "stats": {
       "yield_multiplier": 1.00,
       "extra_roll_chance": 0.02,
@@ -53,6 +57,7 @@
     "type": "tool",
     "equip_slots": ["scavengingTool"],
     "tier": "wood",
+    "description": "A wooden machete for cutting through vegetation. More effective than you'd expect, but handle with care.",
     "stats": {
       "yield_multiplier": 1.00,
       "extra_roll_chance": 0.02,
@@ -65,9 +70,10 @@
     "type": "weapon",
     "equip_slots": ["mainHand"],
     "tier": "wood",
+    "description": "A basic wooden dagger. Not very effective, but better than nothing.",
     "stats": {
       "STR": 1,
-      "AGI": 1,
+      "EVA": 1,
       "CRITPER": 0.02,
       "SKILL": 0.01
     }
@@ -78,6 +84,7 @@
     "type": "tool",
     "equip_slots": ["fishingTool"],
     "tier": "stone",
+    "description": "A robust fishing rod with a stone weight. Surprisingly balanced and far more durable than its wooden predecessor.",
     "stats": {
       "yield_multiplier": 1.15,
       "extra_roll_chance": 0.04,
@@ -90,6 +97,7 @@
     "type": "tool",
     "equip_slots": ["miningTool"],
     "tier": "stone",
+    "description": "A solid stone pickaxe that gets the job done. Heavy, reliable, and makes satisfying contact with rock.",
     "stats": {
       "yield_multiplier": 1.15,
       "extra_roll_chance": 0.04,
@@ -102,6 +110,7 @@
     "type": "tool",
     "equip_slots": ["foragingTool"],
     "tier": "stone",
+    "description": "A capable stone axe that cleaves through branches like butter. Your predecessors knew what they were doing.",
     "stats": {
       "yield_multiplier": 1.15,
       "extra_roll_chance": 0.04,
@@ -114,6 +123,7 @@
     "type": "tool",
     "equip_slots": ["farmingTool"],
     "tier": "stone",
+    "description": "A stone hoe that turns soil with excellent efficiency. Your crops will thank you.",
     "stats": {
       "yield_multiplier": 1.15,
       "extra_roll_chance": 0.04,
@@ -126,6 +136,7 @@
     "type": "tool",
     "equip_slots": ["scavengingTool"],
     "tier": "stone",
+    "description": "A keen-edged stone machete for clearing vegetation. Sharp enough to make quick work of the wilderness.",
     "stats": {
       "yield_multiplier": 1.15,
       "extra_roll_chance": 0.04,

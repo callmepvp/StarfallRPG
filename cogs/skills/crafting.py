@@ -205,7 +205,8 @@ class CraftingCog(commands.Cog):
             await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
 
         # 5) Compute XP = sum of all reqs
-        xp_gain = sum(req for _, req in needs)
+        item_info = _items_data.get(recipe_key.lower(), {})
+        xp_gain = item_info.get("xp", 0) * amount
 
         # 6) Update crafting skill
         sk = await db.skills.find_one({"id": user_id})

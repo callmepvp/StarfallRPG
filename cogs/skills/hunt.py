@@ -200,19 +200,61 @@ class CombatCog(commands.Cog):
             )
         mob_id, mob = mob_choice
 
+        # base player stats
         player_stats = await self._calculate_stats(user_id)
         mob_hp = mob["stats"]["hp"]
         player_hp = player_stats["current_hp"]
 
+        # --- read weapon stats from equipped main hand (if present) and apply on-the-fly ---
+        equip_doc = await db.equipment.find_one({"id": user_id}) or {}
+        # try a few slot name variants to be safe
+        mainhand_iid = equip_doc.get("mainHand") or equip_doc.get("mainhand") or equip_doc.get("mainhand_id") or equip_doc.get("main_hand")
+        weapon_stats = {}
+        weapon_skill_bonus = 0.0
+        if mainhand_iid:
+            instances = equip_doc.get("instances", []) or []
+            inst = next((it for it in instances if it.get("instance_id") == mainhand_iid), None)
+            if inst:
+                # prefer inst-level stats, or fall back to template-level 'stats' if instance doesn't store them
+                weapon_stats = inst.get("stats") or {}
+                # allow template fallback if available
+                if not weapon_stats:
+                    # (we don't import here to keep behavior identical to prior code; instances should ideally have stats)
+                    weapon_stats = inst.get("template_stats", {}) or {}
+                    
+        # defensive casts
+        w_str = float(weapon_stats.get("STR", 0) or 0)
+        w_eva = float(weapon_stats.get("EVA", 0) or 0)
+        w_crit = float(weapon_stats.get("CRITPER", 0) or 0)
+        w_skill = float(weapon_stats.get("SKILL", 0) or 0)
+        weapon_skill_bonus = w_skill
+
+        # apply weapon STR/EVA to the runtime-only player stats (do NOT persist as requested)
+        player_stats["str"] = int(player_stats["str"] + round(w_str))
+        player_stats["eva"] = int(player_stats["eva"] + round(w_eva))
+
         combat_log = []
+        # keep track of whether we got crits for log messages
         while player_hp > 0 and mob_hp > 0:
             # Player attack
             hit_chance = player_stats["acc"] / (player_stats["acc"] + mob["stats"]["eva"])
             if random.random() <= hit_chance:
+                # base damage calculation (as before)
                 damage = max(1, player_stats["str"] - mob["stats"]["def"] // 2)
+
+                # roll crit using weapon crit% (only weapon provides crit in this design)
+                is_crit = random.random() < w_crit if w_crit > 0 else False
+                if is_crit:
+                    damage = int(max(1, damage * 2))  # crit doubles damage
+                    combat_log.append(f"💥 CRITICAL HIT! You dealt **{damage}** damage to {mob['name']}!")
+
+                else:
+                    combat_log.append(f"🗡️ You hit {mob['name']} for **{damage}** damage!")
+
                 mob_hp -= damage
-                combat_log.append(f"🗡️ You hit {mob['name']} for **{damage}** damage!")
-            
+            else:
+                combat_log.append(f"✖️ You missed {mob['name']}.")
+
             # Mob attack
             if mob_hp > 0:
                 mob_hit_chance = mob["stats"]["acc"] / (mob["stats"]["acc"] + player_stats["eva"])
@@ -220,12 +262,20 @@ class CombatCog(commands.Cog):
                     mob_damage = max(1, mob["stats"]["str"] - player_stats["def"] // 2)
                     player_hp = max(0, player_hp - mob_damage)
                     combat_log.append(f"🩸 {mob['name']} hits you for **{mob_damage}** damage!")
+                else:
+                    combat_log.append(f"🛡️ {mob['name']} missed you.")
 
         victory = player_hp > 0
 
         # --- 4) Process results ---
         base_xp = mob["xp"]
-        xp_gain = base_xp if victory else int(base_xp * 0.2)
+        # weapon SKILL increases combat XP gained slightly (multiplicative)
+        xp_multiplier = 1.0 + weapon_skill_bonus
+        if victory:
+            xp_gain = int(base_xp * xp_multiplier)
+        else:
+            xp_gain = int(base_xp * 0.2 * xp_multiplier)
+
         levels_gained, new_level, leveled_up = await self._handle_combat_level_up(user_id, xp_gain)
 
         # Update player state
@@ -236,12 +286,14 @@ class CombatCog(commands.Cog):
             }
         }
         
+        loot = []
+        gold_gain = 0
+        gold_loss = 0
         if victory:
             gold_gain = random.randint(*mob["gold"])
             updates["$inc"]["wallet"] = gold_gain
             
             # Process loot
-            loot = []
             for entry in mob["loot_table"]:
                 if random.random() <= entry["chance"]:
                     qty = random.randint(*entry.get("quantity", [1, 1]))
@@ -301,6 +353,7 @@ class CombatCog(commands.Cog):
             )
 
         if combat_log:
+            # show only last 3 actions
             embed.add_field(
                 name="Combat Log (Last 3 Actions)",
                 value="\n".join(combat_log[-3:]),

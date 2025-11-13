@@ -4,130 +4,180 @@
             "name" : "silverleaf",
             "type" : "scavenging",
             "rarity" : "common",
-            "description" : "",
+            "description" : "A shimmering leaf that catches the light. Probably just looks prettier than it actually is.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
         
         "needlegrass" : {
             "name" : "needlegrass",
             "type" : "scavenging",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Spiky grass that will absolutely destroy your fingers. Worth it though.",
             "xp" : 2,
-            "weight" : 7,
-            "tier" : "hand"
+            "weight" : 7
         },
 
         "stone" : {
             "name" : "stone",
             "type" : "mining",
             "rarity" : "common",
-            "description" : "",
+            "description" : "A rock.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
 
         "coal" : {
             "name" : "coal",
             "type" : "mining",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Perfect for heating things up. Or leaving in someone's stocking if they've been naughty.",
             "xp" : 1,
-            "weight" : 8,
-            "tier" : "hand"
+            "weight" : 8
         },
 
         "oak" : {
             "name" : "oak",
             "type" : "foraging",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Sturdy wood from a mighty oak tree. Probably solid enough for furniture, but you do you.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
 
         "rubber duck" : {
             "name" : "rubber duck",
             "type" : "trash",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Squeaky. Yellow. Probably belonged to someone's bath time. Still works as a duck though.",
             "xp" : 1,
-            "weight" : 1,
-            "tier" : "hand"
+            "weight" : 1
         },
 
         "boot" : {
             "name" : "boot",
             "type" : "trash",
             "rarity" : "common",
-            "description" : "",
+            "description" : "A lonely single boot. Its partner is probably at the bottom of the ocean, living its best life.",
             "xp" : 1,
-            "weight" : 1,
-            "tier" : "hand"
+            "weight" : 1
         },
 
         "seaweed" : {
             "name" : "seaweed",
             "type" : "trash",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Tangled, slimy, and smells like the ocean. What's not to love?",
             "xp" : 1,
-            "weight" : 1,
-            "tier" : "hand"
+            "weight" : 1
         },
 
         "perch" : {
             "name" : "perch",
             "type" : "fishing",
             "rarity" : "common",
-            "description" : "",
+            "description" : "A small, spiky fish. Not the most impressive catch, but it'll do.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
 
         "cod" : {
             "name" : "cod",
             "type" : "fishing",
             "rarity" : "common",
-            "description" : "",
+            "description" : "A classic fish. Probably swam into your net because it wasn't paying attention.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
 
         "trout" : {
             "name" : "trout",
             "type" : "fishing",
             "rarity" : "uncommon",
-            "description" : "",
+            "description" : "A feisty little fighter that put up a decent struggle. Respect the trout.",
             "xp" : 3,
-            "weight" : 8,
-            "tier" : "hand"
+            "weight" : 8
         },
 
         "wheat" : {
             "name" : "wheat",
             "type" : "farming",
             "rarity" : "common",
-            "description" : "",
+            "description" : "Golden grain ready for harvest. The foundation of bread, beer, and broken dreams.",
             "xp" : 1,
-            "weight" : 10,
-            "tier" : "hand"
+            "weight" : 10
         },
 
         "carrot" : {
             "name" : "carrot",
             "type" : "farming",
             "rarity" : "common",
-            "description" : "",
+            "description" : "What rabbits crave.",
             "xp" : 3,
-            "weight" : 7,
-            "tier" : "hand"
+            "weight" : 7
+        },
+
+        "toolrod" : {
+            "name" : "toolrod",
+            "type" : "crafting",
+            "rarity" : "common",
+            "description" : "A perfectly straight rod. Essential for crafting, or just looks cool on a shelf.",
+            "xp" : 3,
+            "weight" : 0
+        },
+
+        "binding" : {
+            "name" : "binding",
+            "type" : "crafting",
+            "rarity" : "common",
+            "description" : "Strong cord that holds things together. Like duct tape, but fancier.",
+            "xp" : 4,
+            "weight" : 0
+        },
+
+        "pickaxe mold" : {
+            "name" : "pickaxe mold",
+            "type" : "crafting",
+            "rarity" : "uncommon",
+            "description" : "A mold for casting pickaxes. Heavy, intricate, and smells like it's been through a lot.",
+            "xp" : 7,
+            "weight" : 0
+        },
+
+        "axe mold" : {
+            "name" : "axe mold",
+            "type" : "crafting",
+            "rarity" : "uncommon",
+            "description" : "The blueprint for creating axes. This mold means business.",
+            "xp" : 7,
+            "weight" : 0
+        },
+
+        "hoe mold" : {
+            "name" : "hoe mold",
+            "type" : "crafting",
+            "rarity" : "uncommon",
+            "description" : "A mold for hoes. Gardeners everywhere are waiting for this.",
+            "xp" : 7,
+            "weight" : 0
+        },
+
+        "machete mold" : {
+            "name" : "machete mold",
+            "type" : "crafting",
+            "rarity" : "uncommon",
+            "description" : "For crafting machetes. Looks dangerously efficient.",
+            "xp" : 7,
+            "weight" : 0
+        },
+
+        "fishing rod mold" : {
+            "name" : "fishing rod mold",
+            "type" : "crafting",
+            "rarity" : "uncommon",
+            "description" : "A mold for fishing rods. Every angler's dream, preserved in stone.",
+            "xp" : 7,
+            "weight" : 0
         }
     }
 }
