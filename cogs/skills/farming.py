@@ -1,6 +1,5 @@
 import datetime
 import random
-import math
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -8,8 +7,8 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources, unlock_collection_recipes
-from settings import GUILD_ID
+from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results
+from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load full items catalog once at import time
 _ITEMS_PATH = Path("data/items.json")
@@ -23,13 +22,6 @@ _AREAS_PATH = Path("data/areas.json")
 _areas_data: Dict[str, Any] = {}
 if _AREAS_PATH.exists():
     _areas_data = json.loads(_AREAS_PATH.read_text(encoding="utf-8"))
-
-# Optional: load item templates for fallback multiplier info
-_ITEM_TEMPLATES_PATH = Path("data/itemTemplates.json")
-_item_templates: Dict[str, Any] = {}
-if _ITEM_TEMPLATES_PATH.exists():
-    import json as _json
-    _item_templates = _json.loads(_ITEM_TEMPLATES_PATH.read_text(encoding="utf-8"))
 
 class FarmingCog(commands.Cog):
     """Handles `/farm`—gather crops, gain XP & Essence, and advance your collections."""
@@ -59,7 +51,7 @@ class FarmingCog(commands.Cog):
         description="🌾 Farm the fields for crops, XP, and Essence!"
     )
     async def farm(self, interaction: discord.Interaction) -> None:
-        db = self.bot.db
+        db = self.bot.db  # type: ignore[attr-defined]
         user_id = interaction.user.id
 
         # --- 1) Registration & stamina & tool ---
@@ -69,18 +61,9 @@ class FarmingCog(commands.Cog):
         if profile.get("stamina", 0) <= 0:
             return await interaction.response.send_message("😴 You’re out of stamina! Rest or use a potion before farming again.", ephemeral=True)
 
-        equipment_doc = await db.equipment.find_one({"id": user_id})
-        tool_iid = equipment_doc.get("farmingTool")
-        if not tool_iid:
-            return await interaction.response.send_message("❌ You must equip a farming tool first.", ephemeral=True)
-
-        instances = equipment_doc.get("instances", [])
-        tool_inst = next((inst for inst in instances if inst.get("instance_id") == tool_iid), None)
+        tool_inst, template = await get_equipped_tool(db, user_id, "farmingTool")
         if not tool_inst:
-            return await interaction.response.send_message(
-                "❌ Your equipped farming tool couldn't be found in your instances. If this persists, contact the dev.",
-                ephemeral=True
-            )
+            return await interaction.response.send_message("❌ You must equip a farming tool first.", ephemeral=True)
 
         # --- 2) Current location & available resources ---
         area_doc = await db.areas.find_one({"id": user_id})
@@ -113,74 +96,39 @@ class FarmingCog(commands.Cog):
         skill_doc = await db.skills.find_one({"id": user_id})
         farming_bonus = int(skill_doc.get("farmingBonus", 0)) if skill_doc else 0
 
-        # Tool multipliers and extra roll
-        tool_yield = tool_inst.get("yield_multiplier") or _item_templates.get(tool_inst.get("template"), {}).get("yield_multiplier") or 1.0
-        tool_extra = tool_inst.get("extra_roll_chance") or _item_templates.get(tool_inst.get("template"), {}).get("extra_roll_chance") or 0.0
-        skill_mult = 1.0 + (farming_bonus * 0.02)
+        final_qty, bonus_gained, float_qty = calculate_final_qty(base_qty, tool_inst, template, farming_bonus)
 
-        float_qty = base_qty * tool_yield * skill_mult
-        integer_qty = math.floor(float_qty)
-        if random.random() < (float_qty - integer_qty):
-            integer_qty += 1
+        xp_per_unit = int(item_info.get("xp", 1))
+        essence_field = "farmingEssence"
 
-        # Extra roll
-        bonus_gained = False
-        extra_chance = tool_extra + farming_bonus * 0.005
-        if random.random() < extra_chance:
-            integer_qty += 1
-            bonus_gained = True
-
-        final_qty = max(0, int(integer_qty))
-        xp_gain = item_info.get("xp", 1) * final_qty
-        essence_gain = round(xp_gain * 0.35, 2)
-
-        # --- 4) Update DB ---
-        await db.inventory.update_one({"id": user_id}, {"$inc": {picked_key: final_qty}})
-        await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
-
-        old_xp = skill_doc["farmingXP"]
-        old_lvl = skill_doc["farmingLevel"]
-        new_xp = old_xp + xp_gain
-        lvl_threshold = 50 * old_lvl + 10
-
-        leveled_up = False
-        bonus_inc = 5
-        if new_xp >= lvl_threshold:
-            leveled_up = True
-            leftover = new_xp - lvl_threshold
-            await db.skills.update_one({"id": user_id}, {"$set": {"farmingLevel": old_lvl + 1, "farmingXP": leftover}, "$inc": {"farmingBonus": bonus_inc}})
-        else:
-            await db.skills.update_one({"id": user_id}, {"$set": {"farmingXP": new_xp}})
-
-        await db.general.update_one({"id": user_id}, {"$inc": {"farmingEssence": essence_gain}})
-
-        # Update collection
-        coll_doc = await db.collections.find_one({"id": user_id})
-        old_coll, old_coll_lvl = coll_doc["crop"], coll_doc["cropLevel"]
-        new_coll = old_coll + final_qty
-        coll_leveled = False
-        if new_coll >= 50 * old_coll_lvl + 50:
-            coll_leveled = True
-            new_level = old_coll_lvl + 1
-            await db.collections.update_one({"id": user_id}, {"$set": {"crop": new_coll, "cropLevel": old_coll_lvl + 1}})
-            await unlock_collection_recipes(db, user_id, "crop", new_level)
-        else:
-            await db.collections.update_one({"id": user_id}, {"$set": {"crop": new_coll}})
+        # --- 4) Apply DB updates (inventory, stamina, xp, collections) ---
+        summary = await apply_gather_results(
+            db=db,
+            user_id=user_id,
+            picked_key=picked_key,
+            final_qty=final_qty,
+            xp_per_unit=xp_per_unit,
+            skill_prefix="farming",
+            skill_bonus_inc=5,
+            essence_field=essence_field,
+            collection_key="crop"
+        )
 
         # --- 5) Build embed ---
         embed = discord.Embed(title="🌾 Farming Results", color=discord.Color.green(), timestamp=datetime.datetime.now())
         embed.add_field(name="Crops Harvested", value=f"You gathered **{final_qty}** × **{item_info['name'].title()}**", inline=False)
-        embed.add_field(name="Farming XP", value=f"⭐ {xp_gain:,} XP", inline=True)
-        embed.add_field(name="Farming Essence", value=f"✨ {essence_gain:,}", inline=True)
+        embed.add_field(name="Farming XP", value=f"⭐ {summary['xp_gain']:,} XP", inline=True)
+        embed.add_field(name="Farming Essence", value=f"✨ {round(summary['xp_gain'] * 0.35, 2):,}", inline=True)
         embed.add_field(name="Stamina Remaining", value=f"💪 {profile['stamina'] - 1}", inline=False)
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
-        if leveled_up:
-            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Farming Level {old_lvl + 1}**\n🔋 +{bonus_inc} farming bonus!", inline=False)
-        if coll_leveled:
-            embed.add_field(name="📚 Collection Milestone!", value=f"Your **Crop Collection** is now **Level {old_coll_lvl + 1}**", inline=False)
+        if summary["skill_leveled"]:
+            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Farming Level {summary['old_skill_level'] + 1}**\n🔋 +5 farming bonus!", inline=False)
+        if summary["collection_leveled"]:
+            embed.add_field(name="📚 Collection Milestone!", value=f"Your **Crop Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 
         await interaction.response.send_message(embed=embed)
 
 async def setup(bot: commands.Bot) -> None:
+    from settings import GUILD_ID
     await bot.add_cog(FarmingCog(bot), guilds=[discord.Object(id=GUILD_ID)])

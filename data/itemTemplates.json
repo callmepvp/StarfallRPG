@@ -5,9 +5,11 @@
     "type": "tool",
     "equip_slots": ["fishingTool"],
     "tier": "wood",
-    "yield_multiplier": 1.00,
-    "extra_roll_chance": 0.02,
-    "rare_multiplier": 1.00
+    "stats": {
+      "yield_multiplier": 1.00,
+      "extra_roll_chance": 0.02,
+      "rare_multiplier": 1.00
+    }
   },
   "Wooden Pickaxe": {
     "name": "Wooden Pickaxe",
@@ -15,9 +17,11 @@
     "type": "tool",
     "equip_slots": ["miningTool"],
     "tier": "wood",
-    "yield_multiplier": 1.00,
-    "extra_roll_chance": 0.02,
-    "rare_multiplier": 1.00
+    "stats": {
+      "yield_multiplier": 1.00,
+      "extra_roll_chance": 0.02,
+      "rare_multiplier": 1.00
+    }
   },
   "Wooden Axe": {
     "name": "Wooden Axe",
@@ -25,9 +29,11 @@
     "type": "tool",
     "equip_slots": ["foragingTool"],
     "tier": "wood",
-    "yield_multiplier": 1.00,
-    "extra_roll_chance": 0.02,
-    "rare_multiplier": 1.00
+    "stats": {
+      "yield_multiplier": 1.00,
+      "extra_roll_chance": 0.02,
+      "rare_multiplier": 1.00
+    }
   },
   "Wooden Hoe": {
     "name": "Wooden Hoe",
@@ -35,9 +41,11 @@
     "type": "tool",
     "equip_slots": ["farmingTool"],
     "tier": "wood",
-    "yield_multiplier": 1.00,
-    "extra_roll_chance": 0.02,
-    "rare_multiplier": 1.00
+    "stats": {
+      "yield_multiplier": 1.00,
+      "extra_roll_chance": 0.02,
+      "rare_multiplier": 1.00
+    }
   },
   "Wooden Machete": {
     "name": "Wooden Machete",
@@ -45,15 +53,18 @@
     "type": "tool",
     "equip_slots": ["scavengingTool"],
     "tier": "wood",
-    "yield_multiplier": 1.00,
-    "extra_roll_chance": 0.02,
-    "rare_multiplier": 1.00
+    "stats": {
+      "yield_multiplier": 1.00,
+      "extra_roll_chance": 0.02,
+      "rare_multiplier": 1.00
+    }
   },
   "Wooden Dagger": {
     "name": "Wooden Dagger",
     "emoji": "🗡️",
     "type": "weapon",
     "equip_slots": ["mainHand"],
+    "tier": "wood",
     "stats": {
       "STR": 1,
       "AGI": 1,
@@ -67,9 +78,11 @@
     "type": "tool",
     "equip_slots": ["fishingTool"],
     "tier": "stone",
-    "yield_multiplier": 1.15,
-    "extra_roll_chance": 0.04,
-    "rare_multiplier": 1.10
+    "stats": {
+      "yield_multiplier": 1.15,
+      "extra_roll_chance": 0.04,
+      "rare_multiplier": 1.10
+    }
   },
   "Stone Pickaxe": {
     "name": "Stone Pickaxe",
@@ -77,9 +90,11 @@
     "type": "tool",
     "equip_slots": ["miningTool"],
     "tier": "stone",
-    "yield_multiplier": 1.15,
-    "extra_roll_chance": 0.04,
-    "rare_multiplier": 1.10
+    "stats": {
+      "yield_multiplier": 1.15,
+      "extra_roll_chance": 0.04,
+      "rare_multiplier": 1.10
+    }
   },
   "Stone Axe": {
     "name": "Stone Axe",
@@ -87,9 +102,11 @@
     "type": "tool",
     "equip_slots": ["foragingTool"],
     "tier": "stone",
-    "yield_multiplier": 1.15,
-    "extra_roll_chance": 0.04,
-    "rare_multiplier": 1.10
+    "stats": {
+      "yield_multiplier": 1.15,
+      "extra_roll_chance": 0.04,
+      "rare_multiplier": 1.10
+    }
   },
   "Stone Hoe": {
     "name": "Stone Hoe",
@@ -97,9 +114,11 @@
     "type": "tool",
     "equip_slots": ["farmingTool"],
     "tier": "stone",
-    "yield_multiplier": 1.15,
-    "extra_roll_chance": 0.04,
-    "rare_multiplier": 1.10
+    "stats": {
+      "yield_multiplier": 1.15,
+      "extra_roll_chance": 0.04,
+      "rare_multiplier": 1.10
+    }
   },
   "Stone Machete": {
     "name": "Stone Machete",
@@ -107,8 +126,10 @@
     "type": "tool",
     "equip_slots": ["scavengingTool"],
     "tier": "stone",
-    "yield_multiplier": 1.15,
-    "extra_roll_chance": 0.04,
-    "rare_multiplier": 1.10
+    "stats": {
+      "yield_multiplier": 1.15,
+      "extra_roll_chance": 0.04,
+      "rare_multiplier": 1.10
+    }
   }
 }

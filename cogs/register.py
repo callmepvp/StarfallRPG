@@ -193,6 +193,8 @@ class RegisterCog(commands.Cog):
                 iid = _make_instance_id(existing_ids=used_ids)
                 used_ids.add(iid)
 
+                tmpl = item_templates.get(template_name, {})
+
                 # instance doc stored inside the player's equipment doc
                 inst_doc = {
                     "instance_id": iid,
@@ -201,7 +203,9 @@ class RegisterCog(commands.Cog):
                     "custom_name": None,
                     "bound": False,
                     "created_at": now,
-                    "slots": item_templates[template_name]["equip_slots"]
+                    "slots": tmpl.get("equip_slots", []),
+                    "stats": tmpl.get("stats", {}).copy() if isinstance(tmpl.get("stats", {}), dict) else {},
+                    "tier": tmpl.get("tier", None)
                 }
                 instances.append(inst_doc)
                 slot_refs[slot] = iid

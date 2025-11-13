@@ -160,7 +160,6 @@ class CraftingCog(commands.Cog):
             used_ids.update(existing_ids)
 
             template_data = item_templates[template_name]
-            slots_from_template = template_data.get("equip_slots", [])
 
             # create amount instances, storing each in equipment.instances and used_ids
             for _i in range(amount):
@@ -173,6 +172,8 @@ class CraftingCog(commands.Cog):
                     # fallback to longer id if we couldn't find a short unique id
                     iid = f"I{int(time.time()*1000)}"
 
+                tmpl = template_data or {}
+
                 inst_doc = {
                     "instance_id": iid,
                     "template": template_name,
@@ -180,7 +181,9 @@ class CraftingCog(commands.Cog):
                     "custom_name": None,
                     "bound": False,
                     "created_at": now,
-                    "slots": slots_from_template
+                    "slots": tmpl.get("equip_slots", []) if isinstance(tmpl.get("equip_slots", []), list) else [],
+                    "stats": tmpl.get("stats", {}).copy() if isinstance(tmpl.get("stats", {}), dict) else {},
+                    "tier": tmpl.get("tier", None)
                 }
 
                 # push the instance into equipment doc
