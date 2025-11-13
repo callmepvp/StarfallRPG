@@ -261,16 +261,26 @@ class AreaCommands(commands.Cog):
                 if completions:
                     # Build a friendly quest update message
                     lines = []
+                    newly_unlocked = []
                     for comp in completions:
                         tpl = comp["template"]
                         title = tpl.get("title", comp["quest_id"])
                         lines.append(f"✅ Quest completed: **{title}**")
-                    
+
+                        # Check next_quest
+                        next_q = tpl.get("next_quest")
+                        if next_q:
+                            unlocked_tpl = await quest_cog.get_template(next_q)
+                            if unlocked_tpl:
+                                newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+
                     await interaction.followup.send(
-                        "\n".join(lines), ephemeral=True
+                        "\n".join(lines + newly_unlocked),
+                        ephemeral=True
                     )
         except Exception as e:
             print(f"[WARN] Failed to update travel quest progress: {e}")
+
 
 async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID

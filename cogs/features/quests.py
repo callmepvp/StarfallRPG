@@ -88,19 +88,19 @@ class QuestCog(commands.Cog):
         """
         Get (or create) the per-player quest document.
         Document format:
-          { "user_id": 123, "active_quests": { "<qid>": {"objectives": {...}, "status": "active"} }, "completed_quests": [...] }
+          { "id": 123, "active_quests": { "<qid>": {"objectives": {...}, "status": "active"} }, "completed_quests": [...] }
         Uses db.quests as the per-player collection (as requested).
         """
         db = self.bot.db
-        doc = await db.quests.find_one({"user_id": user_id})
+        doc = await db.quests.find_one({"id": user_id})
         if not doc:
-            doc = {"user_id": user_id, "active_quests": {}, "completed_quests": []}
+            doc = {"id": user_id, "active_quests": {}, "completed_quests": []}
             await db.quests.insert_one(doc)
         return doc
 
     async def save_player_doc(self, doc: Dict[str, Any]) -> None:
         db = self.bot.db
-        await db.quests.update_one({"user_id": doc["user_id"]}, {"$set": doc}, upsert=True)
+        await db.quests.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
 
     @app_commands.command(name="quests", description="Show available & active quests.")
     async def quests(self, interaction: discord.Interaction) -> None:
@@ -109,6 +109,7 @@ class QuestCog(commands.Cog):
         pdoc = await self.get_player_doc(user_id)
         active = pdoc.get("active_quests", {})
         completed = set(pdoc.get("completed_quests", []))
+        completed_ids = set(pdoc.get("completed_quests", []))
 
         embed = discord.Embed(title="📜 Quests", color=discord.Color.blurple())
 
@@ -135,6 +136,18 @@ class QuestCog(commands.Cog):
                 embed.add_field(name=f"🟢 {tpl.get('title')}", value=value_text, inline=False)
         else:
             embed.add_field(name="🟢 Active", value="None", inline=False)
+
+        # Completed quests
+        if completed_ids:
+            completed_lines = []
+            for qid in completed_ids:
+                tpl = await self.get_template(qid)
+                if not tpl:
+                    continue
+                completed_lines.append(f"{tpl.get('title', qid)}")
+            embed.add_field(name="✅ Completed Quests", value="\n".join(completed_lines) if completed_lines else "None", inline=False)
+        else:
+            embed.add_field(name="✅ Completed Quests", value="None", inline=False)
 
         # Available templates (from JSON) — show nicer sub-area names when possible
         templates = await self.list_templates()

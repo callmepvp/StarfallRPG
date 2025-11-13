@@ -4,27 +4,80 @@
     "sub_area": "lynthaven",
     "dialogue": {
       "start": {
-        "text": "Greetings, traveler! What brings you here?",
+        "text": "'Ah, a traveler! My forge has been busy all morning. What brings you here?'",
+        "lore": "Holger has been shaping iron and steel for decades. His arms bear the marks of many years at the anvil.",
         "options": [
           {"label": "Ask about tools", "next": "tools_info"},
+          {"label": "Hear local rumors", "next": "rumors"},
+          {"label": "Teach me about the world", "next": "world_lore"},
           {"label": "Shop", "action": "shop"},
-          {"label": "Say goodbye", "next": "end"}
+          {"label": "Goodbye", "next": "end"}
         ]
       },
       "tools_info": {
-        "text": "I craft weapons and tools. Always looking for good ore.",
+        "text": "'I forge swords, shields, and all manners of tools. With practice, you could apprentice with me.'",
+        "lore": "Holger's hammer is said to strike true, passed down from his father. Sparks dance like fireflies whenever he works.",
         "options": [
+          {"label": "Ask about the forge", "next": "forge_lore"},
           {"label": "Shop", "action": "shop"},
           {"label": "Back", "next": "start"}
         ]
       },
+      "forge_lore": {
+        "text": "'The forge was rebuilt after a storm five years ago. Some of the stones still bear scorch marks from that night. I remember it as if it was yesterday...'",
+        "lore": "Legends say that the old forge could shape metal without fire. Holger likes to tell this story to those who listen, but you can see his posture change whenever he talks about it.",
+        "options": [
+          {"label": "Back", "next": "tools_info"},
+          {"label": "Goodbye", "next": "end"}
+        ]
+      },
+      "rumors": {
+        "text": "'Travelers whisper of strange lights in the eastern marsh. Some say spirits move between the reeds at night.'",
+        "lore": "Holger prefers to stay in the village, but he sometimes wonders what truths lie beyond the hills.",
+        "options": [
+          {"label": "Ask more", "next": "rumors_more"},
+          {"label": "Back", "next": "start"}
+        ]
+      },
+      "rumors_more": {
+        "text": "'Some claim to hear a bell tolling deep in the marsh, but others think it's just the wind through the reeds. But hey, who am I to choose what is right and what is wrong - you might just have to go look for yourself.'",
+        "lore": "These tales have been told for generations. Holger shares them to entertain curious travelers.",
+        "options": [
+          {"label": "Back", "next": "rumors"},
+          {"label": "Goodbye", "next": "end"}
+        ]
+      },
+      "world_lore": {
+        "text": "'The lands are old, shaped by wars long past. Lynthaven itself was once part of a larger kingdom.'",
+        "lore": "Holger knows much about the local region: the old mines, the river trade routes, and the nearby meadow.",
+        "options": [
+          {"label": "Ask about history", "next": "history"},
+          {"label": "Ask about wildlife", "next": "wildlife"},
+          {"label": "Back", "next": "start"}
+        ]
+      },
+      "history": {
+        "text": "'Lynthaven grew around the river. Long ago, knights defended these lands from invaders, but most of their castles are ruins now.'",
+        "lore": "",
+        "options": [
+          {"label": "Back", "next": "world_lore"},
+          {"label": "Goodbye", "next": "end"}
+        ]
+      },
+      "wildlife": {
+        "text": "'The forests are home to foxes, wolves, and the occasional bear. The marshes hide creatures most avoid.'",
+        "lore": "",
+        "options": [
+          {"label": "Back", "next": "world_lore"},
+          {"label": "Goodbye", "next": "end"}
+        ]
+      },
       "end": {
-        "text": "Farewell, traveler!",
+        "text": "Farewell, traveler. May your hammer never miss.",
         "options": []
       }
     },
     "shop_items": {
-      "iron": 50
     }
   }
 }

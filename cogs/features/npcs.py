@@ -1,148 +1,192 @@
+# cogs/features/npcs.py
+from __future__ import annotations
 import json
 from pathlib import Path
-from typing import Dict, Optional
+from typing import Dict, Any
 
 import discord
 from discord import app_commands
 from discord.ext import commands
-from discord.ui import View, Button, Select
+from discord.ui import View, Select, Button
 
 _NPCS_PATH = Path("data/quests/npcs.json")
-_npcs_data: Dict[str, dict] = {}
+_npcs_data: Dict[str, Dict[str, Any]] = {}
 if _NPCS_PATH.exists():
-    _npcs_data = json.loads(_NPCS_PATH.read_text(encoding="utf-8"))
+    try:
+        _npcs_data = json.loads(_NPCS_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        _npcs_data = {}
 
+def _titleize_key(key: str) -> str:
+    return key.replace("_", " ").title()
 
-# --------------------------
-# NPC Dialogue System
-# --------------------------
 class NPCDialogueView(View):
-    """Interactive dialogue for NPCs with buttons for options and shops."""
-
-    def __init__(self, npc_data: dict, user_id: int):
-        super().__init__(timeout=None)
+    def __init__(self, npc_id: str, npc_data: Dict[str, Any], user_id: int, timeout: float = 300.0):
+        super().__init__(timeout=timeout)
+        self.npc_id = npc_id
         self.npc_data = npc_data
         self.user_id = user_id
-        self.current_node_key = "start"
-        self.update_buttons_for_node(self.current_node_key)
+        self.current_node: str = "start" if "start" in npc_data.get("dialogue", {}) else next(iter(npc_data.get("dialogue", {})), None)
+        if self.current_node is None:
+            raise ValueError("NPC has no dialogue nodes")
+        self._rebuild_buttons_for_node(self.current_node)
 
-    def update_buttons_for_node(self, node_key: str):
-        """Clear buttons and create new ones based on the dialogue node."""
-        self.clear_items()
-        node = self.npc_data.get("dialogue", {}).get(node_key)
-        if not node:
-            return
-        for option in node.get("options", []):
-            label = option.get("label", "???")
-            if option.get("action") == "shop":
-                self.add_item(Button(label=label, style=discord.ButtonStyle.green, custom_id=f"shop:{node_key}"))
+    def _clear_buttons(self):
+        for child in list(self.children):
+            self.remove_item(child)
+
+    def _rebuild_buttons_for_node(self, node_key: str) -> None:
+        self._clear_buttons()
+        node = self.npc_data.get("dialogue", {}).get(node_key, {})
+        options = node.get("options", [])
+
+        for opt in options:
+            label = opt.get("label", "…")
+            if opt.get("action") == "shop":
+                btn = Button(label=label, style=discord.ButtonStyle.success)
+                async def shop_cb(inter: discord.Interaction, _opt=opt, _node=node_key):
+                    embed = discord.Embed(
+                        title=f"{self.npc_data.get('name','NPC')} — Shop (Placeholder)",
+                        description=_opt.get("shop_text", "This shop is under construction."),
+                        color=discord.Color.green()
+                    )
+                    shop_items = self.npc_data.get("shop_items", {})
+                    if shop_items:
+                        shop_lines = [f"• {k.replace('_',' ').title()} — {v} gold" for k, v in shop_items.items()]
+                        embed.add_field(name="Items", value="\n".join(shop_lines), inline=False)
+                    self._rebuild_buttons_for_node(_node)
+                    await inter.response.edit_message(embed=embed, view=self)
+                btn.callback = shop_cb
+                self.add_item(btn)
+                continue
+
+            next_node = opt.get("next")
+            if not next_node or next_node.lower() == "end":
+                btn = Button(label=label, style=discord.ButtonStyle.secondary)
+                async def end_cb(inter: discord.Interaction, _opt=opt):
+                    final_text = _opt.get("text", "Farewell, traveler.")
+                    embed = discord.Embed(
+                        title=self.npc_data.get("name", "NPC"),
+                        description=final_text,
+                        color=discord.Color.dark_gold()
+                    )
+                    await inter.response.edit_message(embed=embed, view=None)
+                    self.stop()
+                btn.callback = end_cb
+                self.add_item(btn)
             else:
-                next_node = option.get("next", "")
-                self.add_item(Button(label=label, style=discord.ButtonStyle.blurple, custom_id=f"node:{next_node}"))
-
-        # Add end conversation button
-        self.add_item(Button(label="End Conversation", style=discord.ButtonStyle.red, custom_id="end"))
+                btn = Button(label=label, style=discord.ButtonStyle.primary)
+                async def next_cb(inter: discord.Interaction, _next=next_node):
+                    node_dict = self.npc_data.get("dialogue", {}).get(_next)
+                    if not node_dict:
+                        await inter.response.send_message("⚠️ Dialogue node missing.", ephemeral=True)
+                        return
+                    self.current_node = _next
+                    self._rebuild_buttons_for_node(_next)
+                    description = node_dict.get("text", "")
+                    lore = node_dict.get("lore")
+                    if lore:
+                        description += f"\n\n{lore}"
+                    embed = discord.Embed(
+                        title=self.npc_data.get("name", "NPC"),
+                        description=description,
+                        color=discord.Color.gold()
+                    )
+                    await inter.response.edit_message(embed=embed, view=self)
+                btn.callback = next_cb
+                self.add_item(btn)
 
     async def interaction_check(self, interaction: discord.Interaction) -> bool:
-        # restrict to the user who opened the dialogue
         return interaction.user.id == self.user_id
 
-    async def on_timeout(self):
-        # optional cleanup if needed
+    async def on_timeout(self) -> None:
         pass
-
-    @discord.ui.button(label="placeholder", style=discord.ButtonStyle.secondary, custom_id="placeholder", disabled=True)
-    async def dummy(self, button: Button, interaction: discord.Interaction):
-        # placeholder so View doesn't error out if empty
-        pass
-
-    async def button_callback(self, interaction: discord.Interaction, custom_id: str):
-        if custom_id == "end":
-            await interaction.response.edit_message(content="You end the conversation.", embed=None, view=None)
-            self.stop()
-            return
-
-        if custom_id.startswith("node:"):
-            next_node = custom_id.split(":", 1)[1]
-            node = self.npc_data.get("dialogue", {}).get(next_node)
-            if not node:
-                await interaction.response.send_message("Dialogue node missing.", ephemeral=True)
-                return
-            embed = discord.Embed(
-                title=self.npc_data.get("name", "NPC"),
-                description=node.get("text", ""),
-                color=discord.Color.gold()
-            )
-            self.current_node_key = next_node
-            self.update_buttons_for_node(next_node)
-            await interaction.response.edit_message(embed=embed, view=self)
-        elif custom_id.startswith("shop:"):
-            # placeholder shop handling
-            embed = discord.Embed(
-                title=f"{self.npc_data.get('name', 'NPC')} Shop",
-                description="🛒 Shop coming soon! Placeholder for items.",
-                color=discord.Color.green()
-            )
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-
 
 class TalkSelect(Select):
-    """Dropdown to select an NPC from the current subarea."""
-
-    def __init__(self, npcs_here: Dict[str, dict], user_id: int):
-        options = [discord.SelectOption(label=npc["name"], value=npc_id) for npc_id, npc in npcs_here.items()]
-        super().__init__(placeholder="Choose an NPC to talk to...", min_values=1, max_values=1, options=options)
+    def __init__(self, npcs_here: Dict[str, Dict[str, Any]], user_id: int):
+        options = [discord.SelectOption(label=data.get("name", nid), value=nid) for nid, data in npcs_here.items()]
+        super().__init__(placeholder="So many options...", min_values=1, max_values=1, options=options)
         self.npcs_here = npcs_here
         self.user_id = user_id
 
-    async def callback(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction) -> None:
         npc_id = self.values[0]
-        npc_data = self.npcs_here[npc_id]
-        start_node = npc_data.get("dialogue", {}).get("start", {})
+        npc_data = self.npcs_here.get(npc_id)
+        if not npc_data:
+            return await interaction.response.send_message("❌ NPC data missing.", ephemeral=True)
+
+        start_node_key = "start" if "start" in npc_data.get("dialogue", {}) else next(iter(npc_data.get("dialogue", {})), None)
+        node = npc_data.get("dialogue", {}).get(start_node_key, {})
+        description = node.get("text", "")
+        lore = node.get("lore")
+        if lore:
+            description += f"\n\n{lore}"
         embed = discord.Embed(
             title=npc_data.get("name", "NPC"),
-            description=start_node.get("text", ""),
+            description=description,
             color=discord.Color.gold()
         )
-        view = NPCDialogueView(npc_data, interaction.user.id)
-        # Attach callback for buttons dynamically
-        for btn in view.children:
-            btn.callback = lambda inter, cid=btn.custom_id: view.button_callback(inter, cid)
+
+        view = NPCDialogueView(npc_id, npc_data, self.user_id)
         await interaction.response.edit_message(embed=embed, view=view)
 
+        # Quest Integration
+        try:
+            quest_cog = interaction.client.get_cog("QuestCog")
+            if quest_cog:
+                completed_quests = await quest_cog.update_progress(self.user_id, "talk", npc_id, amount=1)
+
+                if completed_quests:
+                    # Notify completed quests
+                    msg_lines = []
+                    newly_unlocked = []
+                    for q in completed_quests:
+                        tpl = q.get("template", {})
+                        title = tpl.get("title", "Unknown Quest")
+                        msg_lines.append(f"✅ Quest '{title}' completed!")
+
+                        # Check next_quest
+                        next_q = tpl.get("next_quest")
+                        if next_q:
+                            unlocked_tpl = await quest_cog.get_template(next_q)
+                            if unlocked_tpl:
+                                newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+
+                    if msg_lines or newly_unlocked:
+                        await interaction.followup.send("\n".join(msg_lines + newly_unlocked), ephemeral=True)
+
+        except Exception:
+            pass
 
 class TalkDropdownView(View):
-    def __init__(self, npcs_here: Dict[str, dict], user_id: int):
-        super().__init__(timeout=None)
+    def __init__(self, npcs_here: Dict[str, Dict[str, Any]], user_id: int):
+        super().__init__(timeout=120.0)
         self.add_item(TalkSelect(npcs_here, user_id))
 
-
-# --------------------------
-# NPCCog for /talk
-# --------------------------
 class NPCCog(commands.Cog):
-    """Talk to NPCs in your current subarea."""
-
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
     @app_commands.command(name="talk", description="Talk to NPCs in your current subarea.")
-    async def talk(self, interaction: discord.Interaction):
+    async def talk(self, interaction: discord.Interaction) -> None:
         db = self.bot.db
         user_id = interaction.user.id
+
         area_doc = await db.areas.find_one({"id": user_id})
         if not area_doc:
             return await interaction.response.send_message("❌ Can't determine your location.", ephemeral=True)
 
         current_sub = area_doc.get("currentSubarea")
-        npcs_here = {nid: data for nid, data in _npcs_data.items() if data.get("sub_area") == current_sub}
+        if not current_sub:
+            return await interaction.response.send_message("❌ You are not in a valid subarea.", ephemeral=True)
+
+        npcs_here = {nid: n for nid, n in _npcs_data.items() if n.get("sub_area") == current_sub}
         if not npcs_here:
             return await interaction.response.send_message("ℹ️ There are no NPCs here to talk to.", ephemeral=True)
 
         view = TalkDropdownView(npcs_here, user_id)
-        await interaction.response.send_message("Choose an NPC to talk to:", view=view, ephemeral=True)
+        await interaction.response.send_message("Choose an NPC to speak to:", view=view, ephemeral=True)
 
-
-async def setup(bot: commands.Bot):
+async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID
     await bot.add_cog(NPCCog(bot), guilds=[discord.Object(id=GUILD_ID)])
