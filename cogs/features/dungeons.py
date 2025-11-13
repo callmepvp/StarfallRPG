@@ -52,6 +52,22 @@ class DungeonCog(commands.Cog):
             "skills": skills
         }
 
+    async def update_player_hp(self, user_id: int, current_hp: int):
+        """Update player's HP in database immediately"""
+        db = self.bot.db
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {"hp": current_hp}}
+        )
+
+    async def set_dungeon_status(self, user_id: int, in_dungeon: bool):
+        """Set player's dungeon status in database"""
+        db = self.bot.db
+        await db.general.update_one(
+            {"id": user_id},
+            {"$set": {"inDungeon": in_dungeon}}
+        )
+
     def calculate_combat_stats(self, player_data: Dict[str, Any]) -> Dict[str, Any]:
         """Calculate final combat stats including equipment bonuses"""
         # Base stats from player level/attributes
@@ -96,7 +112,9 @@ class DungeonCog(commands.Cog):
         user_id = interaction.user.id
         
         # Check if player already in dungeon
-        if user_id in self.active_dungeons:
+        db = self.bot.db
+        player_check = await db.general.find_one({"id": user_id})
+        if player_check and player_check.get("inDungeon", False):
             return await interaction.response.send_message(
                 "❌ You're already in a dungeon! Complete it first.",
                 ephemeral=True
@@ -136,6 +154,9 @@ class DungeonCog(commands.Cog):
         
         # Calculate player stats
         player_stats = self.calculate_combat_stats(player_data)
+        
+        # Set dungeon status
+        await self.set_dungeon_status(user_id, True)
         
         # Start dungeon
         floor_data = dungeon_floors[floor_key]
@@ -209,6 +230,10 @@ class DungeonCog(commands.Cog):
             if key in dungeon_mobs:
                 mob = dungeon_mobs[key].copy()
                 mob["current_hp"] = mob["stats"]["hp"]
+                # Initialize combat-specific properties
+                mob["is_defending"] = False
+                mob["telegraphed_attack"] = None
+                mob["telegraph_turns"] = 0
                 mobs.append(mob)
         
         if not mobs:
@@ -231,6 +256,10 @@ class DungeonCog(commands.Cog):
     async def complete_dungeon(self, interaction: discord.Interaction, user_id: int):
         """Handle dungeon completion"""
         dungeon_data = self.active_dungeons.pop(user_id, None)
+        
+        # Clear dungeon status regardless
+        await self.set_dungeon_status(user_id, False)
+        
         if not dungeon_data:
             return
         
@@ -283,7 +312,7 @@ class DungeonCog(commands.Cog):
             {"$inc": {"wallet": dungeon_data["gold"]}}
         )
         
-        # Update HP
+        # Update HP (final HP update)
         await db.general.update_one(
             {"id": user_id},
             {"$set": {"hp": dungeon_data["player_stats"]["current_hp"]}}
@@ -321,6 +350,17 @@ class DungeonCombatView(View):
         self.floor = floor
         self.cog = cog
         self.combat_log = []
+        self.player_focus = 0  # Focus meter for the combat
+        self.player_is_defending = False  # Track if player defended this turn
+
+    async def on_timeout(self):
+        """Handle view timeout - treat as fleeing"""
+        # Update HP in database before clearing dungeon
+        await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
+        await self.cog.set_dungeon_status(self.user_id, False)
+        
+        # Clear from active dungeons
+        self.cog.active_dungeons.pop(self.user_id, None)
 
     def create_combat_embed(self) -> discord.Embed:
         """Create embed showing current combat state"""
@@ -332,20 +372,35 @@ class DungeonCombatView(View):
         )
         
         # Player info
+        player_info = f"❤️ HP: {self.player_stats['current_hp']}/{self.player_stats['max_hp']}\n"
+        player_info += f"💪 STR: {self.player_stats['str']}\n"
+        player_info += f"🛡️ DEF: {self.player_stats['def']}\n"
+        player_info += f"🎯 Focus: {self.player_focus}/100"  # Focus meter
+        
         embed.add_field(
             name="👤 Player",
-            value=f"❤️ HP: {self.player_stats['current_hp']}/{self.player_stats['max_hp']}\n"
-                  f"💪 STR: {self.player_stats['str']}\n"
-                  f"🛡️ DEF: {self.player_stats['def']}",
+            value=player_info,
             inline=True
         )
         
         # Enemy info
+        enemy_info = f"❤️ HP: {current_mob['current_hp']}/{current_mob['stats']['hp']}\n"
+        enemy_info += f"💪 STR: {current_mob['stats']['str']}\n"
+        enemy_info += f"🛡️ DEF: {current_mob['stats']['def']}\n"
+        
+        # Show if enemy is defending
+        if current_mob.get('is_defending'):
+            enemy_info += "🛡️ **Defending**\n"
+        
+        # Show telegraphed attack info
+        if current_mob.get('telegraphed_attack'):
+            turns_left = current_mob.get('telegraph_turns', 0)
+            attack_name = current_mob['telegraphed_attack']['name']
+            enemy_info += f"⚡ **{attack_name}** in {turns_left} turn{'s' if turns_left > 1 else ''}!\n"
+        
         embed.add_field(
             name=f"👹 {current_mob['name']}",
-            value=f"❤️ HP: {current_mob['current_hp']}/{current_mob['stats']['hp']}\n"
-                  f"💪 STR: {current_mob['stats']['str']}\n"
-                  f"🛡️ DEF: {current_mob['stats']['def']}",
+            value=enemy_info,
             inline=True
         )
         
@@ -385,38 +440,175 @@ class DungeonCombatView(View):
     async def process_attack(self, interaction: discord.Interaction):
         """Process player attack"""
         current_mob = self.mobs[self.current_mob_index]
+        self.player_is_defending = False
+        
+        # Check if mob is defending
+        mob_defending = current_mob.get('is_defending', False)
         
         # Player attacks mob
         player_damage = self.calculate_damage(self.player_stats, current_mob["stats"])
-        current_mob["current_hp"] -= player_damage
         
-        self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage!")
+        # Reduce damage if mob is defending
+        if mob_defending:
+            player_damage = max(1, player_damage // 2)
+            self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage (reduced by defense)!")
+            current_mob['is_defending'] = False  # Mob stops defending after being hit
+        else:
+            self.combat_log.append(f"⚔️ You attack {current_mob['name']} for **{player_damage}** damage!")
+        
+        current_mob["current_hp"] -= player_damage
         
         # Check if mob died
         if current_mob["current_hp"] <= 0:
             await self.handle_mob_defeated(interaction, current_mob)
             return
         
-        # Mob attacks player
-        await self.process_mob_attack(interaction)
+        # Mob's turn
+        await self.process_mob_turn(interaction)
 
     async def process_defend(self, interaction: discord.Interaction):
         """Process player defend action"""
         current_mob = self.mobs[self.current_mob_index]
+        self.player_is_defending = True
         
-        # Player defends - take reduced damage
-        self.combat_log.append("🛡️ You brace for impact! Next damage reduced.")
+        # Gain focus for defending
+        focus_gain = 15
+        self.player_focus = min(100, self.player_focus + focus_gain)
+        self.combat_log.append(f"🛡️ You brace for impact! Gained **{focus_gain}** focus.")
         
-        # Mob attacks with reduced damage
-        mob_damage = max(1, self.calculate_damage(current_mob["stats"], self.player_stats) // 2)
+        # Mob's turn
+        await self.process_mob_turn(interaction)
+
+    async def process_mob_turn(self, interaction: discord.Interaction):
+        """Process the mob's turn with AI behavior"""
+        current_mob = self.mobs[self.current_mob_index]
+        
+        # Handle telegraphed attacks first
+        if current_mob.get('telegraphed_attack'):
+            turns_left = current_mob.get('telegraph_turns', 0) - 1
+            current_mob['telegraph_turns'] = turns_left
+            
+            if turns_left <= 0:
+                # Execute telegraphed attack
+                await self.execute_telegraphed_attack(interaction, current_mob)
+                return
+            else:
+                self.combat_log.append(f"⚡ {current_mob['name']} is charging {current_mob['telegraphed_attack']['name']}... ({turns_left} turns left)")
+                # Mob doesn't do anything else while charging special attack
+                await self.check_combat_status(interaction)
+                return
+        
+        # Decide mob action based on behavior
+        behavior = current_mob.get('behavior', 'aggressive')
+        action_choice = random.random()
+        
+        # Behavior-based action probabilities
+        if behavior == 'aggressive':
+            defend_chance = 0.1  # 10% chance to defend
+            special_attack_chance = 0.15  # 15% chance to start special attack
+        elif behavior == 'ranged':
+            defend_chance = 0.2  # 20% chance to defend  
+            special_attack_chance = 0.25  # 25% chance to start special attack
+        else:
+            defend_chance = 0.3  # 30% chance to defend for other behaviors
+            special_attack_chance = 0.1  # 10% chance to start special attack
+        
+        # Check if mob should start a special attack
+        if action_choice < special_attack_chance and not current_mob.get('telegraphed_attack'):
+            await self.start_mob_special_attack(interaction, current_mob)
+            return
+        
+        # Check if mob should defend
+        if action_choice < defend_chance + special_attack_chance:
+            current_mob['is_defending'] = True
+            self.combat_log.append(f"🛡️ {current_mob['name']} takes a defensive stance!")
+            await self.check_combat_status(interaction)
+            return
+        
+        # Default to normal attack
+        await self.process_mob_attack(interaction)
+
+    async def start_mob_special_attack(self, interaction: discord.Interaction, mob: Dict[str, Any]):
+        """Start a telegraphed special attack for the mob"""
+        special_attacks = mob.get('special_attacks', [])
+        if not special_attacks:
+            special_attack = {
+                'name': 'Power Attack',
+                'telegraph_turns': 1,
+                'damage_multiplier': 2.0,
+                'description': 'charges up a powerful attack!'
+            }
+        else:
+            special_attack = random.choice(special_attacks)
+
+        mob['telegraphed_attack'] = special_attack
+        mob['telegraph_turns'] = special_attack['telegraph_turns']
+        self.combat_log.append(f"⚡ {mob['name']} {special_attack['description']}")
+
+        await self.check_combat_status(interaction)
+
+    async def execute_telegraphed_attack(self, interaction: discord.Interaction, mob: Dict[str, Any]):
+        """Execute a telegraphed special attack"""
+        special_attack = mob['telegraphed_attack']
+        base_damage = self.calculate_damage(mob["stats"], self.player_stats)
+        special_damage = int(base_damage * special_attack['damage_multiplier'])
+        
+        # Check if player defended at the right time
+        if self.player_is_defending:
+            # Successful defend - greatly reduce damage
+            special_damage = max(1, special_damage // 4)
+            self.combat_log.append(f"💥 {mob['name']} uses **{special_attack['name']}** for **{special_damage}** damage (defended)!")
+            # Gain extra focus for successfully defending a special attack
+            focus_gain = 25
+            self.player_focus = min(100, self.player_focus + focus_gain)
+            self.combat_log.append(f"🎯 Well-timed defense! Gained **{focus_gain}** focus!")
+        else:
+            # Player didn't defend - full damage + potential stun
+            special_damage = int(special_damage)
+            self.combat_log.append(f"💥 {mob['name']} uses **{special_attack['name']}** for **{special_damage}** damage!")
+            # 50% chance to stun if not defended
+            if random.random() < 0.5:
+                self.combat_log.append("😵 You are **stunned** and will be vulnerable next turn!")
+                # Stun effect could be implemented here
+        
+        self.player_stats["current_hp"] -= special_damage
+        # Update HP in database immediately
+        await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
+        
+        mob['telegraphed_attack'] = None
+        mob['telegraph_turns'] = 0
+        
+        await self.check_combat_status(interaction)
+
+    async def process_mob_attack(self, interaction: discord.Interaction):
+        """Process mob normal attack"""
+        current_mob = self.mobs[self.current_mob_index]
+        
+        mob_damage = self.calculate_damage(current_mob["stats"], self.player_stats)
+        
+        # Check if player is defending
+        if self.player_is_defending:
+            mob_damage = max(1, mob_damage // 2)
+            self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage (reduced)!")
+            # Gain focus for successful defense
+            focus_gain = 10
+            self.player_focus = min(100, self.player_focus + focus_gain)
+        else:
+            self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage!")
+        
         self.player_stats["current_hp"] -= mob_damage
+        # Update HP in database immediately
+        await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
         
-        self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage (reduced)!")
+        self.player_is_defending = False  # Reset defense after attack
         
         await self.check_combat_status(interaction)
 
     async def process_flee(self, interaction: discord.Interaction):
         """Process player flee action"""
+        # Update HP in database before fleeing
+        await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
+        
         # 50% chance to flee successfully
         if random.random() < 0.5:
             self.combat_log.append("🏃 You successfully fled from combat!")
@@ -429,20 +621,12 @@ class DungeonCombatView(View):
             mob_damage = self.calculate_damage(current_mob["stats"], self.player_stats)
             self.player_stats["current_hp"] -= mob_damage
             
+            # Update HP in database after taking damage
+            await self.cog.update_player_hp(self.user_id, self.player_stats["current_hp"])
+            
             self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage!")
             
             await self.check_combat_status(interaction)
-
-    async def process_mob_attack(self, interaction: discord.Interaction):
-        """Process mob attack on player"""
-        current_mob = self.mobs[self.current_mob_index]
-        
-        mob_damage = self.calculate_damage(current_mob["stats"], self.player_stats)
-        self.player_stats["current_hp"] -= mob_damage
-        
-        self.combat_log.append(f"👹 {current_mob['name']} attacks for **{mob_damage}** damage!")
-        
-        await self.check_combat_status(interaction)
 
     def calculate_damage(self, attacker_stats: Dict[str, Any], defender_stats: Dict[str, Any]) -> int:
         """Calculate damage between attacker and defender"""
@@ -494,6 +678,9 @@ class DungeonCombatView(View):
     async def end_combat(self, interaction: discord.Interaction, victory: bool, fled: bool = False):
         """End the current combat"""
         dungeon_data = self.cog.active_dungeons.get(self.user_id)
+        
+        await self.cog.set_dungeon_status(self.user_id, False)
+        
         if not dungeon_data:
             return
         
