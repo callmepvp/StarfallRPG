@@ -178,6 +178,114 @@
             "description" : "A mold for fishing rods. Every angler's dream, preserved in stone.",
             "xp" : 7,
             "weight" : 0
+        },
+
+        "animal bone" : {
+            "name" : "animal bone",
+            "type" : "hunting",
+            "rarity" : "common",
+            "description" : "A sturdy bone from a wild animal. Could be useful for crafting or just as a snack for your dog.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "coyote fang" : {
+            "name" : "coyote fang",
+            "type" : "hunting",
+            "rarity" : "uncommon",
+            "description" : "A sharp fang from a plains coyote. Might fetch a good price with the right buyer.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "boar leather" : {
+            "name" : "boar leather",
+            "type" : "hunting",
+            "rarity" : "uncommon",
+            "description" : "Tough leather from a mudback boar. Great for crafting durable gear.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "boar tusk" : {
+            "name" : "boar tusk",
+            "type" : "hunting",
+            "rarity" : "rare",
+            "description" : "A sharp tusk from a mudback boar. Highly sought after by collectors and craftsmen alike.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "spider silk" : {
+            "name" : "spider silk",
+            "type" : "hunting",
+            "rarity" : "common",
+            "description" : "Fine silk harvested from spiders. Strong and lightweight, perfect for crafting.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "spider fang" : {
+            "name" : "spider fang",
+            "type" : "hunting",
+            "rarity" : "rare",
+            "description" : "A venomous fang from a forest spider. Handle with care.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "rabbit hide" : {
+            "name" : "rabbit hide",
+            "type" : "hunting",
+            "rarity" : "common",
+            "description" : "Soft hide from a wild rabbit. Useful for crafting light armor or clothing.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "rabbit meat" : {
+            "name" : "rabbit meat",
+            "type" : "hunting",
+            "rarity" : "common",
+            "description" : "Lean meat from a wild rabbit. A tasty treat when cooked properly.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "bear claw" : {
+            "name" : "bear claw",
+            "type" : "hunting",
+            "rarity" : "uncommon",
+            "description" : "A sharp claw from a forest bear. Valuable for crafting and as a trophy.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "bear hide" : {
+            "name" : "bear hide",
+            "type" : "hunting",
+            "rarity" : "rare",
+            "description" : "Thick hide from a black bear. Highly prized for crafting durable armor and clothing.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "fox pelt" : {
+            "name" : "fox pelt",
+            "type" : "hunting",
+            "rarity" : "uncommon",
+            "description" : "A beautiful pelt from a red fox. Soft and warm, perfect for crafting luxurious garments.",
+            "xp" : 0,
+            "weight" : 0
+        },
+
+        "bandit tooth" : {
+            "name" : "bandit tooth",
+            "type" : "hunting",
+            "rarity" : "rare",
+            "description" : "A jagged tooth taken from a defeated bandit. A grim trophy of victory.",
+            "xp" : 0,
+            "weight" : 0
         }
     }
 }

@@ -243,6 +243,10 @@
               "quest_id": "crafting_basics_intro"
             },
             {
+              "label": "Any good tips?",
+              "next": "advice2"
+            },
+            {
               "label": "Goodbye",
               "next": "end"
             }
@@ -250,6 +254,7 @@
         },
         "advice": {
           "text": "'Holger at the forge is a good place to start, and the pond has patient hands if you want to fish. If you seek training, Emberveil has those who still remember the old ways.'",
+          "lore": "Myla seems to know more about Holger than she lets on, but she smiles warmly as she speaks.",
           "options": [
             {
               "label": "Thanks",
@@ -257,8 +262,17 @@
             }
           ]
         },
+        "advice2": {
+          "text": "'The more you collect of a certain resource, such as stone or oak, the more knowledge you gain about it. This will help you progress in their respective collections and unlock new crafting recipes.'",
+          "options": [
+            {
+              "label": "Interesting",
+              "next": "start"
+            }
+          ]
+        },
         "lore": {
-          "text": "'This village has stood through hard winters and quiet summers. Sharebread with neighbors and learn their stories.'",
+          "text": "'This village has stood through hard winters and quiet summers. Sharebread with neighbors and learn their stories. You might even get good tips!'",
           "options": [
             {
               "label": "I'll do that",
@@ -267,7 +281,7 @@
           ]
         },
         "give_start": {
-          "text": "'Then go - meet the people, and do not be afraid to ask. Return when you have learned a bit of the land.'",
+          "text": "'Then go, meet the people, and do not be afraid to ask. Return when you have learned a bit of the land.'",
           "options": [
             {
               "label": "Begin",

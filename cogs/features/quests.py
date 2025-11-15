@@ -137,6 +137,14 @@ class QuestCog(commands.Cog):
 
         embed = discord.Embed(title="📜 Quests", color=discord.Color.blurple())
 
+        db = self.bot.db
+        player = await db.general.find_one({"id": user_id})
+        if not player:
+            return await interaction.response.send_message(
+                "❌ You need to `/register` before you can do this.", 
+                ephemeral=True
+            )
+
         if active:
             for qid, pdata in active.items():
                 tpl = await self.get_template(qid)
@@ -190,7 +198,7 @@ class QuestCog(commands.Cog):
                 display_sub = found_name or _titleize_key(sub)
             else:
                 display_sub = "Various"
-            avail_lines.append(f"**{tpl['title']}** — Area: {display_sub} (id: `{qid}`)")
+            avail_lines.append(f"**{tpl['title']}** — Subarea: {display_sub} (id: `{qid}`)")
 
         embed.add_field(name="🟡 Available Quests", value="\n".join(avail_lines) if avail_lines else "None", inline=False)
 
@@ -201,6 +209,15 @@ class QuestCog(commands.Cog):
     async def quest_accept(self, interaction: discord.Interaction, quest_id: str) -> None:
         await interaction.response.defer(thinking=True)
         user_id = interaction.user.id
+
+        db = self.bot.db
+        player = await db.general.find_one({"id": user_id})
+        if not player:
+            return await interaction.response.send_message(
+                "❌ You need to `/register` before you can do this.", 
+                ephemeral=True
+            )
+
         tpl = await self.get_template(quest_id)
         if not tpl:
             return await interaction.followup.send("❌ No such quest template found.", ephemeral=True)
@@ -346,7 +363,7 @@ class QuestCog(commands.Cog):
         unlocked_templates = await self.get_unlocked_next_quests(user_id, tpl)
 
         title = tpl.get("title", quest_id)
-        msg = f"✅ Quest **{title}** turned in."
+        msg = f"✅ Quest **'{title}'** turned in."
         return True, msg, unlocked_templates, rewards_given
 
     async def _grant_rewards(self, user_id: int, rewards: Dict[str, Any]) -> Dict[str, Any]:

@@ -65,6 +65,21 @@
     },
 
     {
+      "quest_id": "blacksmith_tutorial_2",
+      "title": "A Pickaxe for Every Purpose",
+      "description": "Holger asks you to craft a stone pickaxe. This will better help you understand the crafting process and get you further acquainted with mining.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "lynthaven",
+      "objectives": [
+        { "type": "craft", "target": "stone pickaxe", "amount": 1 }
+      ],
+      "rewards": { "gold": [10, 15], "items": [], "equipment": [] },
+      "prereqs": ["blacksmith_tutorial_1"],
+      "next_quests": []
+    },
+
+    {
       "quest_id": "explore_emberveil",
       "title": "Journey to Emberveil",
       "description": "Elder Myla suggests you explore Emberveil, a larger settlement to the east. It's a good opportunity to familiarize yourself with the area and its inhabitants.",
@@ -90,7 +105,38 @@
         { "type": "talk", "target": "retired_ranger_ronan", "amount": 1 }
       ],
       "rewards": { "gold": [5, 10], "items": [], "equipment": [] },
-      "prereqs": ["blacksmith_tutorial_1", "explore_emberveil"],
+      "prereqs": ["blacksmith_tutorial_2", "explore_emberveil"],
+      "next_quests": []
+    },
+
+    {
+      "quest_id": "combat_intro_2",
+      "title": "Getting a weapon",
+      "description": "Ronan suggests you acquire a basic weapon to practice your combat skills. He mentions that a simple wooden dagger would suffice for now.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "emberveil",
+      "objectives": [
+        { "type": "craft", "target": "wooden dagger", "amount": 1 }
+      ],
+      "rewards": { "gold": [10, 15], "items": [], "equipment": [] },
+      "prereqs": ["combat_intro_1"],
+      "next_quests": ["combat_intro_3"],
+      "npc_given": true
+    },
+
+    {
+      "quest_id": "combat_intro_3",
+      "title": "First Training",
+      "description": "Ronan wants you to practice your combat skills by defeating 5 Goblins that have been spotted near Emberveil.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "emberveil",
+      "objectives": [
+        { "type": "defeat", "target": "goblin", "amount": 5 }
+      ],
+      "rewards": { "gold": [15, 25], "items": [], "equipment": [] },
+      "prereqs": ["combat_intro_2"],
       "next_quests": []
     },
 
