@@ -96,7 +96,7 @@ class AreaCommands(commands.Cog):
             )
 
         # Resources (uppercase)
-        resources = sub_data.get('resources', [])
+        resources = sub_data.get('resources', [] )
         if resources:
             embed.add_field(
                 name="🪵 Resources", 
@@ -272,25 +272,50 @@ class AreaCommands(commands.Cog):
                     amount=1
                 )
                 if completions:
-                    # Build a friendly quest update message
                     lines = []
                     newly_unlocked = []
                     for comp in completions:
                         tpl = comp["template"]
                         title = tpl.get("title", comp["quest_id"])
-                        lines.append(f"✅ Quest completed: **{title}**")
+                        reward_texts = []
 
-                        # Check next_quest
-                        next_q = tpl.get("next_quest")
-                        if next_q:
-                            unlocked_tpl = await quest_cog.get_template(next_q)
-                            if unlocked_tpl:
-                                newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+                        rewards = tpl.get("rewards", {})
+                        # Gold
+                        if "gold" in rewards:
+                            rng = rewards["gold"]
+                            if isinstance(rng, list) and len(rng) == 2:
+                                amt = f"{rng[0]}-{rng[1]}"
+                            else:
+                                amt = str(rng)
+                            reward_texts.append(f"{amt}💰")
+                        # Items
+                        if "items" in rewards and rewards["items"]:
+                            reward_texts.append(", ".join(rewards["items"]))
+                        # Equipment
+                        if "equipment" in rewards and rewards["equipment"]:
+                            reward_texts.append("Equipment: " + ", ".join(rewards["equipment"]))
 
-                    await interaction.followup.send(
-                        "\n".join(lines + newly_unlocked),
-                        ephemeral=True
-                    )
+                        rewards_display = f"Rewards: {', '.join(reward_texts)}" if reward_texts else ""
+                        lines.append(f"✅ Quest completed: **{title}**{rewards_display}")
+
+                        # Get the new unlocked quests
+                        try:
+                            unlocked_templates = await quest_cog.get_unlocked_next_quests(user_id, tpl)
+                            for ut in unlocked_templates:
+                                newly_unlocked.append(f"🟡 New quest unlocked: '{ut.get('title','Unknown')}'")
+                        except Exception:
+                            # fallback legacy behavior
+                            next_q = tpl.get("next_quest")
+                            if next_q:
+                                try:
+                                    unlocked_tpl = await quest_cog.get_template(next_q)
+                                    if unlocked_tpl:
+                                        newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+                                except Exception:
+                                    continue
+
+                    await interaction.followup.send("\n".join(lines + newly_unlocked), ephemeral=True)
+
         except Exception as e:
             print(f"[WARN] Failed to update travel quest progress: {e}")
 

@@ -13,7 +13,7 @@
         "image": "url_to_pond_image",
         "mobs": [],
         "resources": ["rubber duck", "boot", "seaweed", "perch", "cod", "trout", "oak"],
-        "connections": ["lynthaven", "meadow"]
+        "connections": ["lynthaven", "meadow", "thicket"]
       },
       "lynthaven": {
         "name": "Lynthaven",
@@ -22,7 +22,7 @@
         "image": "url_to_village1_image",
         "mobs": ["goblin"],
         "resources": ["oak", "stone", "coal", "wheat", "carrot"],
-        "connections": ["pond", "well", "meadow"]
+        "connections": ["pond", "well", "meadow", "shady_shack"]
       },
       "meadow": {
         "name": "Meadow",
@@ -31,7 +31,16 @@
         "image": "url_to_meadow_image",
         "mobs": ["plains_coyote", "mudback_boar"],
         "resources": ["oak", "silverleaf", "needlegrass", "stone", "coal"],
-        "connections": ["pond", "lynthaven", "emberveil"]
+        "connections": ["pond", "lynthaven", "emberveil", "shady_shack"]
+      },
+      "thicket": {
+        "name": "Thicket",
+        "type": "medium",
+        "lore": "A dense thicket of trees and underbrush, home to many small creatures.",
+        "image": "url_to_thicket_image",
+        "mobs": ["forest_spider", "wild_rabbit", "bear", "fox"],
+        "resources": ["oak", "stone", "silverleaf", "needlegrass"],
+        "connections": ["pond"]
       },
       "well": {
         "name": "Well",
@@ -50,6 +59,15 @@
         "mobs": [],
         "resources": [],
         "connections": ["well", "emberveil"]
+      },
+      "shady_shack": {
+        "name": "Shady Shack",
+        "type": "small",
+        "lore": "A secluded shack hidden among the trees, rumored to be a hideout.",
+        "image": "url_to_shady_shack_image",
+        "mobs": ["bandit"],
+        "resources": [],
+        "connections": ["meadow", "lynthaven"]
       },
       "emberveil": {
         "name": "Emberveil",

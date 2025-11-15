@@ -60,5 +60,103 @@
       "behavior": "charging",
       "special_ability": "mud_armor"
     }
-  }
+  },
+  "forest_spider": {
+      "name": "Forest Spider",
+      "level": 2,
+      "stats": {
+        "hp": 40,
+        "str": 3,
+        "def": 1,
+        "eva": 5,
+        "acc": 4
+      },
+      "xp": 6,
+      "gold": [4, 10],
+      "loot_table": [
+        {"item": "spider_silk", "chance": 0.6, "quantity": [1,3]},
+        {"item": "spider_fang", "chance": 0.2}
+      ],
+      "respawn_time": 200,
+      "behavior": "ambush",
+      "weakness": ["fire"]
+    },
+    "wild_rabbit": {
+      "name": "Wild Rabbit",
+      "level": 1,
+      "stats": {
+        "hp": 20,
+        "str": 1,
+        "def": 1,
+        "eva": 8,
+        "acc": 5
+      },
+      "xp": 3,
+      "gold": [2, 5],
+      "loot_table": [
+        {"item": "rabbit_hide", "chance": 0.5},
+        {"item": "rabbit_meat", "chance": 0.7}
+      ],
+      "respawn_time": 150,
+      "behavior": "fleeing",
+      "weakness": ["piercing"]
+    },
+    "bear": {
+      "name": "Black Bear",
+      "level": 5,
+      "stats": {
+        "hp": 120,
+        "str": 10,
+        "def": 8,
+        "eva": 3,
+        "acc": 2
+      },
+      "xp": 20,
+      "gold": [15, 25],
+      "loot_table": [
+        {"item": "bear_claw", "chance": 0.5, "quantity": [1,2]},
+        {"item": "bear_hide", "chance": 0.4}
+      ],
+      "respawn_time": 400,
+      "behavior": "territorial",
+      "special_ability": "maul"
+    },
+    "fox": {
+      "name": "Red Fox",
+      "level": 3,
+      "stats": {
+        "hp": 60,
+        "str": 4,
+        "def": 3,
+        "eva": 7,
+        "acc": 5
+      },
+      "xp": 12,
+      "gold": [7, 14],
+      "loot_table": [
+        {"item": "fox_pelt", "chance": 0.6}
+      ],
+      "respawn_time": 250,
+      "behavior": "cunning",
+      "weakness": ["fire"]
+    },
+    "bandit": {
+      "name": "Bandit",
+      "level": 4,
+      "stats": {
+        "hp": 80,
+        "str": 6,
+        "def": 4,
+        "eva": 5,
+        "acc": 4
+      },
+      "xp": 18,
+      "gold": [10, 20],
+      "loot_table": [
+        {"item": "bandit_tooth", "chance": 0.3}
+      ],
+      "respawn_time": 300,
+      "behavior": "aggressive",
+      "special_ability": "steal"
+    }
 }

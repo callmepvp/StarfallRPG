@@ -2,7 +2,7 @@
 from __future__ import annotations
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Set, List
 
 import discord
 from discord import app_commands
@@ -18,11 +18,23 @@ if _NPCS_PATH.exists():
         _npcs_data = {}
 
 class NPCDialogueView(View):
-    def __init__(self, npc_id: str, npc_data: Dict[str, Any], user_id: int, timeout: float = 300.0):
+    def __init__(
+        self,
+        npc_id: str,
+        npc_data: Dict[str, Any],
+        user_id: int,
+        ready_turnins: Optional[Set[str]] = None,
+        active_quests: Optional[Set[str]] = None,
+        completed_quests: Optional[Set[str]] = None,
+        timeout: float = 300.0,
+    ):
         super().__init__(timeout=timeout)
         self.npc_id = npc_id
         self.npc_data = npc_data
         self.user_id = user_id
+        self.ready_turnins = ready_turnins or set()
+        self.active_quests = active_quests or set()
+        self.completed_quests = completed_quests or set()
         self.current_node: str = "start" if "start" in npc_data.get("dialogue", {}) else next(iter(npc_data.get("dialogue", {})), None)
         if self.current_node is None:
             raise ValueError("NPC has no dialogue nodes")
@@ -32,6 +44,36 @@ class NPCDialogueView(View):
         for child in list(self.children):
             self.remove_item(child)
 
+    def _disable_quest_buttons(self, quest_id: str, completed: bool = False) -> None:
+        """
+        Disable (or remove) any buttons in this view that are tied to the given quest_id.
+        If completed is True we also add it to self.completed_quests and remove from active_quests.
+        Otherwise we mark it active in self.active_quests.
+        """
+        # Update local state first
+        if completed:
+            self.completed_quests.add(quest_id)
+            if quest_id in self.active_quests:
+                self.active_quests.remove(quest_id)
+        else:
+            self.active_quests.add(quest_id)
+
+        # Disable all buttons with matching custom_id
+        target_cid = f"quest:{quest_id}"
+        for child in list(self.children):
+            if isinstance(child, Button):
+                cid = getattr(child, "custom_id", None)
+                if cid == target_cid:
+                    # If completed, remove the button entirely to avoid confusion.
+                    if completed:
+                        try:
+                            self.remove_item(child)
+                        except Exception:
+                            # fallback to disabling
+                            child.disabled = True
+                    else:
+                        child.disabled = True
+
     def _rebuild_buttons_for_node(self, node_key: str) -> None:
         self._clear_buttons()
         node = self.npc_data.get("dialogue", {}).get(node_key, {})
@@ -40,24 +82,82 @@ class NPCDialogueView(View):
         for opt in options:
             label = opt.get("label", "…")
 
-            # --- Quest Button ---
+            # --- Quest Button --- (now supports accept OR turn-in)
             if opt.get("action") == "give_quest" and "quest_id" in opt:
                 quest_id = opt["quest_id"]
-                btn = Button(label=label, style=discord.ButtonStyle.success)
 
-                async def quest_cb(inter: discord.Interaction, qid=quest_id, _btn=btn):
+                # If player already completed this quest -> DO NOT SHOW the button
+                if quest_id in self.completed_quests:
+                    continue
+
+                # If player already has it active -> show but disabled
+                is_active = quest_id in self.active_quests
+                is_ready = quest_id in self.ready_turnins
+                btn_label = label
+                style = discord.ButtonStyle.success
+                if is_ready:
+                    btn_label = f"Turn in: {label}"
+                    style = discord.ButtonStyle.primary
+
+                # set custom_id so we can identify duplicates later
+                btn = Button(label=btn_label, style=style, disabled=is_active and (not is_ready), custom_id=f"quest:{quest_id}")
+
+                async def quest_cb(inter: discord.Interaction, qid=quest_id, _btn=btn, _opt=opt):
                     quest_cog = inter.client.get_cog("QuestCog")
                     if not quest_cog:
                         return await inter.response.send_message("❌ Quest system unavailable.", ephemeral=True)
 
-                    tpl = await quest_cog.get_template(quest_id)
-                    quest_title = tpl.get("title", quest_id) if tpl else quest_id
+                    # fresh check for turn-in
+                    try:
+                        can_turn, _ = await quest_cog.can_turn_in(inter.user.id, qid)
+                        if can_turn:
+                            ok, msg, unlocked, rewards = await quest_cog.attempt_turnin(inter.user.id, qid, npc_id=self.npc_id)
+                            if ok:
+                                # disable/remove all buttons for this quest in the view
+                                self._disable_quest_buttons(qid, completed=True)
+                                # update the message view
+                                try:
+                                    await inter.response.edit_message(view=self)
+                                except Exception:
+                                    # if edit_message already used, fallback to followup
+                                    pass
 
-                    success = await quest_cog.accept_for_player(inter.user.id, quest_id)
+                                # build messages (rewards + unlocked)
+                                unlocked_lines = [f"🟡 New quest unlocked: '{u.get('title','Unknown')}'" for u in unlocked]
+                                reward_lines = []
+                                if rewards:
+                                    if rewards.get("gold"):
+                                        reward_lines.append(f"+{rewards['gold']} gold")
+                                    for it in rewards.get("items", []):
+                                        reward_lines.append(f"+{it['qty']}x {it['id']}")
+                                    for eq in rewards.get("equipment", []):
+                                        reward_lines.append(f"+{eq}")
+                                lines = [msg]
+                                if reward_lines:
+                                    lines.append("Rewards: " + ", ".join(reward_lines))
+                                if unlocked_lines:
+                                    lines += unlocked_lines
+                                await inter.followup.send("\n".join(lines), ephemeral=True)
+                                return
+                            else:
+                                await inter.response.send_message(msg, ephemeral=True)
+                                return
+                    except Exception:
+                        # if any helper fails, continue to accept flow
+                        pass
+
+                    # Otherwise try to accept the quest (legacy behaviour)
+                    tpl = await quest_cog.get_template(qid)
+                    quest_title = tpl.get("title", qid) if tpl else qid
+
+                    success = await quest_cog.accept_for_player(inter.user.id, qid)
                     if success:
-                        # Disable the button so it cannot be clicked again
-                        _btn.disabled = True
-                        await inter.response.edit_message(view=self)
+                        # mark it active in view and disable all duplicate buttons immediately
+                        self._disable_quest_buttons(qid, completed=False)
+                        try:
+                            await inter.response.edit_message(view=self)
+                        except Exception:
+                            pass
                         await inter.followup.send(f"🟢 Quest accepted: **{quest_title}**", ephemeral=True)
                     else:
                         await inter.response.send_message(f"⚠️ You already have or completed the quest **{quest_title}**.", ephemeral=True)
@@ -69,17 +169,25 @@ class NPCDialogueView(View):
             next_node = opt.get("next")
             if not next_node or next_node.lower() == "end":
                 btn = Button(label=label, style=discord.ButtonStyle.secondary)
-                async def end_cb(inter: discord.Interaction, _opt=opt):
-                    final_text = _opt.get("text", "Farewell, traveler.")
+
+                async def end_cb(inter: discord.Interaction, _opt=opt, _npc_data=self.npc_data):
+                    end_node = _npc_data.get("dialogue", {}).get(_opt.get("next") or "end", {})
+                    final_text = end_node.get("text", "Farewell, traveler.")
+                    lore_text = end_node.get("lore")
+                    if lore_text:
+                        final_text += f"\n\n{lore_text}"
+
                     embed = discord.Embed(
-                        title=self.npc_data.get("name", "NPC"),
+                        title=_npc_data.get("name", "NPC"),
                         description=final_text,
                         color=discord.Color.dark_gold()
                     )
                     await inter.response.edit_message(embed=embed, view=None)
                     self.stop()
+
                 btn.callback = end_cb
                 self.add_item(btn)
+
             else:
                 btn = Button(label=label, style=discord.ButtonStyle.primary)
                 async def next_cb(inter: discord.Interaction, _next=next_node):
@@ -133,30 +241,72 @@ class TalkSelect(Select):
             color=discord.Color.gold()
         )
 
-        view = NPCDialogueView(npc_id, npc_data, self.user_id)
-        await interaction.response.edit_message(embed=embed, view=view)
-
-        # Quest Integration
+        ready_turnins: Set[str] = set()
+        active_quests: Set[str] = set()
+        completed_quests: Set[str] = set()
         try:
             quest_cog = interaction.client.get_cog("QuestCog")
             if quest_cog:
-                completed_quests = await quest_cog.update_progress(self.user_id, "talk", npc_id, amount=1)
+                # determine active / completed quests for this user
+                pdoc = await quest_cog.get_player_doc(self.user_id)
+                active_quests = set(pdoc.get("active_quests", {}).keys())
+                completed_quests = set(pdoc.get("completed_quests", []))
 
-                if completed_quests:
-                    # Notify completed quests
+                options = node.get("options", [])
+                for opt in options:
+                    if opt.get("action") == "give_quest" and "quest_id" in opt:
+                        qid = opt["quest_id"]
+                        # only check turn-in readiness for quests not yet completed
+                        if qid not in completed_quests:
+                            can_turn, _ = await quest_cog.can_turn_in(self.user_id, qid)
+                            if can_turn:
+                                ready_turnins.add(qid)
+        except Exception:
+            ready_turnins = set()
+            active_quests = set()
+            completed_quests = set()
+
+        view = NPCDialogueView(npc_id, npc_data, self.user_id, ready_turnins, active_quests, completed_quests)
+        await interaction.response.edit_message(embed=embed, view=view)
+
+        # Quest Integration: propagate 'talk' progress & show completion/unlocked messages
+        try:
+            quest_cog = interaction.client.get_cog("QuestCog")
+            if quest_cog:
+                completed = await quest_cog.update_progress(self.user_id, "talk", npc_id, amount=1)
+
+                if completed:
                     msg_lines = []
                     newly_unlocked = []
-                    for q in completed_quests:
-                        tpl = q.get("template", {})
+                    for comp in completed:
+                        tpl = comp.get("template", {}) or {}
                         title = tpl.get("title", "Unknown Quest")
+                        rewards = comp.get("rewards", {}) or {}
+                        reward_lines = []
+                        if rewards:
+                            if rewards.get("gold"):
+                                reward_lines.append(f"+{rewards['gold']} gold")
+                            for it in rewards.get("items", []):
+                                reward_lines.append(f"+{it['qty']}x {it['id']}")
+                            for eq in rewards.get("equipment", []):
+                                reward_lines.append(f"+{eq}")
                         msg_lines.append(f"✅ Quest '{title}' completed!")
+                        if reward_lines:
+                            msg_lines.append("Rewards: " + ", ".join(reward_lines))
 
-                        # Check next_quest
-                        next_q = tpl.get("next_quest")
-                        if next_q:
-                            unlocked_tpl = await quest_cog.get_template(next_q)
-                            if unlocked_tpl:
-                                newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+                        try:
+                            unlocked_templates = await quest_cog.get_unlocked_next_quests(self.user_id, tpl)
+                            for ut in unlocked_templates:
+                                newly_unlocked.append(f"🟡 New quest unlocked: '{ut.get('title','Unknown')}'")
+                        except Exception:
+                            next_q = tpl.get("next_quest")
+                            if next_q:
+                                try:
+                                    unlocked_tpl = await quest_cog.get_template(next_q)
+                                    if unlocked_tpl:
+                                        newly_unlocked.append(f"🟡 New quest unlocked: '{unlocked_tpl.get('title','Unknown')}'")
+                                except Exception:
+                                    continue
 
                     if msg_lines or newly_unlocked:
                         await interaction.followup.send("\n".join(msg_lines + newly_unlocked), ephemeral=True)

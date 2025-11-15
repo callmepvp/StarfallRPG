@@ -198,7 +198,7 @@
             "quest_id": "pond_fishing_intro"
           },
           {
-            "label": "Maybe later",
+            "label": "See ya",
             "next": "end"
           }
         ]
@@ -218,6 +218,276 @@
         "options": []
       }
     }
-  }
+  },
 
+  "elder_myla": {
+      "name": "Elder Myla",
+      "sub_area": "shady_shack",
+      "dialogue": {
+        "start": {
+          "text": "'Welcome to Lynthaven, child of the road. I keep an eye on those who arrive - there's always something to learn.'",
+          "lore": "Elder Myla has guided newcomers for decades. She is keen-eyed and kind, with a habit of pointing you toward the right people.",
+          "options": [
+            {
+              "label": "What should I see first?",
+              "next": "advice"
+            },
+            {
+              "label": "Tell me about Lynthaven",
+              "next": "lore"
+            },
+            {
+              "label": "I am ready to begin",
+              "next": "give_start",
+              "action": "give_quest",
+              "quest_id": "crafting_basics_intro"
+            },
+            {
+              "label": "Goodbye",
+              "next": "end"
+            }
+          ]
+        },
+        "advice": {
+          "text": "'Holger at the forge is a good place to start, and the pond has patient hands if you want to fish. If you seek training, Emberveil has those who still remember the old ways.'",
+          "options": [
+            {
+              "label": "Thanks",
+              "next": "start"
+            }
+          ]
+        },
+        "lore": {
+          "text": "'This village has stood through hard winters and quiet summers. Sharebread with neighbors and learn their stories.'",
+          "options": [
+            {
+              "label": "I'll do that",
+              "next": "start"
+            }
+          ]
+        },
+        "give_start": {
+          "text": "'Then go - meet the people, and do not be afraid to ask. Return when you have learned a bit of the land.'",
+          "options": [
+            {
+              "label": "Begin",
+              "next": "end"
+            }
+          ]
+        },
+        "end": {
+          "text": "May your path be steady. Come back if you need guidance.",
+          "options": []
+        }
+      }
+  },
+
+  "retired_ranger_ronan": {
+    "name": "Ronan, the Retired Ranger",
+    "sub_area": "emberveil",
+    "dialogue": {
+      "start": {
+        "text": "'You look like someone who can keep themselves. Sit a while - I'll teach you what matters in a fight.'",
+        "lore": "Ronan once tracked beasts across the plains. His hands are quiet now, but his eyes study posture and intent.",
+        "options": [
+          {
+            "label": "Teach me about combat",
+            "next": "teach_stats"
+          },
+          {
+            "label": "Do you have any tasks?",
+            "next": "give_first",
+            "action": "give_quest",
+            "quest_id": "combat_intro_1"
+          },
+          {
+            "label": "Stories of the wild",
+            "next": "stories"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "teach_stats": {
+        "text": "'Strength lets your blow land harder. Accuracy helps your strikes hit. Evasion keeps you from being struck. Defense softens the pain. Weapons change how these apply: light blades favor accuracy, heavy tools favor strength.'",
+        "lore": "Ronan gestures to a rack of old weapons and points to how different grips and lengths changed each fight.",
+        "options": [
+          {
+            "label": "Tell me about weapons",
+            "next": "weapons"
+          },
+          {
+            "label": "I'm ready for a task",
+            "next": "give_first",
+            "action": "give_quest",
+            "quest_id": "combat_intro_2"
+          },
+          {
+            "label": "Back",
+            "next": "start"
+          }
+        ]
+      },
+      "weapons": {
+        "text": "'A dagger is quick and lets you strike fast. A heavier blade hits harder but can be slower. You'll learn in time what suits you.'",
+        "options": [
+          {
+            "label": "Back",
+            "next": "teach_stats"
+          }
+        ]
+      },
+      "give_first": {
+        "text": "'Very well. I will show you the ropes. Begin by listening to the land - return to me when you are ready.'",
+        "options": [
+          {
+            "label": "Understood",
+            "next": "end"
+          }
+        ]
+      },
+      "stories": {
+        "text": "'There was a night the wolves circled the northern mead. A small band of hunters held them off. The land remembers both victory and the price.'",
+        "options": [
+          {
+            "label": "Tell me more",
+            "next": "stories_more"
+          },
+          {
+            "label": "Back",
+            "next": "start"
+          }
+        ]
+      },
+      "stories_more": {
+        "text": "'The old bell in the marsh tolls sometimes, they say. Whether it's omen or echo - you can find many things if you look.'",
+        "options": [
+          {
+            "label": "Back",
+            "next": "stories"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "end": {
+        "text": "Keep your eyes open. I will see you on the trail.",
+        "options": []
+      }
+    }
+  },
+
+  "thicket_forager": {
+    "name": "Bram, the Thicket Forager",
+    "sub_area": "thicket",
+    "dialogue": {
+      "start": {
+        "text": "'Greetings, traveler. The thicket is full of useful plants and sturdy wood. Care to gather some supplies?'",
+        "lore": "Bram knows the thicket like the back of his hand. He can spot a good stick or root a mile away.",
+        "options": [
+          {
+            "label": "What should I gather?",
+            "next": "gather_info"
+          },
+          {
+            "label": "I'll gather some wood",
+            "next": "accept",
+            "action": "give_quest",
+            "quest_id": "foraging_intro"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "gather_info": {
+        "text": "'Look for sturdy wood and the silverleaf. A little patience and you'll have what you need.'",
+        "options": [
+          {
+            "label": "Accept task",
+            "next": "accept",
+            "action": "give_quest",
+            "quest_id": "foraging_intro"
+          },
+          {
+            "label": "Back",
+            "next": "start"
+          }
+        ]
+      },
+      "accept": {
+        "text": "'Good luck. Return when you've got enough wood.'",
+        "options": [
+          {
+            "label": "Understood",
+            "next": "end"
+          }
+        ]
+      },
+      "end": {
+        "text": "May the woods be generous to you.",
+        "options": []
+      }
+    }
+  },
+
+  "meadow_farmer": {
+    "name": "Gareth, Meadow Farmer",
+    "sub_area": "meadow",
+    "dialogue": {
+      "start": {
+        "text": "'We could use fresh hands for a short while. Harvest a few carrots or wheat and I'll pay you a coin.'",
+        "lore": "Gareth tends the small plots on meadow, near the edge of Lynthaven. He hums as he works and always has a spare loaf.",
+        "options": [
+          {
+            "label": "Tell me about your farm",
+            "next": "farm_info"
+          },
+          {
+            "label": "I'll help with the harvest",
+            "next": "accept",
+            "action": "give_quest",
+            "quest_id": "farming_intro"
+          },
+          {
+            "label": "Goodbye",
+            "next": "end"
+          }
+        ]
+      },
+      "farm_info": {
+        "text": "'Wheat and carrots grow well here with a little tending. Watch for pests and keep the soil turned.'",
+        "options": [
+          {
+            "label": "I'll help",
+            "next": "accept",
+            "action": "give_quest",
+            "quest_id": "farming_intro"
+          },
+          {
+            "label": "Back",
+            "next": "start"
+          }
+        ]
+      },
+      "accept": {
+        "text": "'Much appreciated. Bring what you harvest to me and I'll reward you.'",
+        "options": [
+          {
+            "label": "Understood",
+            "next": "end"
+          }
+        ]
+      },
+      "end": {
+        "text": "May your crops grow tall.",
+        "options": []
+      }
+    }
+  }
 }

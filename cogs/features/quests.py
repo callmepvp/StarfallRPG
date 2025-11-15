@@ -2,7 +2,7 @@
 import json
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import discord
 from discord import app_commands
@@ -13,20 +13,10 @@ _AREAS_PATH = Path("data/areas.json")
 
 
 def _titleize_key(key: str) -> str:
-    """Convert a snake_case key into a readable title (e.g. 'lynthaven' -> 'Lynthaven')."""
     return key.replace("_", " ").title()
 
 
 def _humanize_objective(obj: Dict[str, Any], cur: int, amount: int) -> str:
-    """
-    Turn an objective template into a readable line.
-    Examples:
-      {type: explore, target: lynthaven} -> "Explore Lynthaven — 0/1"
-      {type: talk, target: blacksmith}  -> "Talk to the Blacksmith — 0/1"
-      {type: collect, target: oak}      -> "Obtain Oak — 2/5"
-      {type: use_skill, target: fish}   -> "Catch a Fish — 0/1"   (custom phrasing for fish)
-      {type: kill, target: goblin}      -> "Defeat Goblin — 1/3"
-    """
     t = obj.get("type", "").lower()
     target = obj.get("target", "")
     display_target = _titleize_key(target)
@@ -37,8 +27,9 @@ def _humanize_objective(obj: Dict[str, Any], cur: int, amount: int) -> str:
         text = f"Talk to the {display_target}"
     elif t == "collect":
         text = f"Obtain {display_target}"
+    elif t == "fetch":
+        text = f"Bring {display_target} to the quest giver"
     elif t in ("use_skill", "skill", "use"):
-        # special-case "fish" to make it more natural
         if target.lower() == "fish":
             text = "Catch a Fish"
         else:
@@ -46,7 +37,6 @@ def _humanize_objective(obj: Dict[str, Any], cur: int, amount: int) -> str:
     elif t == "kill":
         text = f"Defeat {display_target}"
     else:
-        # fallback: "<Type> <Target>"
         text = f"{t.capitalize()} {display_target}"
 
     return f"• {text} — {cur}/{amount}"
@@ -58,7 +48,6 @@ class QuestCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
-        # Load templates from JSON once on startup (this is the canonical template source)
         self._file_cache: Dict[str, Dict[str, Any]] = {}
         if _QUESTS_PATH.exists():
             raw = json.loads(_QUESTS_PATH.read_text(encoding="utf-8"))
@@ -67,7 +56,6 @@ class QuestCog(commands.Cog):
         else:
             self._file_cache = {}
 
-        # Optional: load areas for nicer sub_area name mapping (fallback to titleizing)
         self._areas_cache: Dict[str, Any] = {}
         if _AREAS_PATH.exists():
             try:
@@ -77,20 +65,12 @@ class QuestCog(commands.Cog):
                 self._areas_cache = {}
 
     async def get_template(self, quest_id: str) -> Optional[Dict[str, Any]]:
-        """Return the quest template from the JSON file cache (templates are file-backed)."""
         return self._file_cache.get(quest_id)
 
     async def list_templates(self) -> List[Dict[str, Any]]:
-        """Return a list of all templates from the JSON file cache."""
         return list(self._file_cache.values())
 
     async def get_player_doc(self, user_id: int) -> Dict[str, Any]:
-        """
-        Get (or create) the per-player quest document.
-        Document format:
-          { "id": 123, "active_quests": { "<qid>": {"objectives": {...}, "status": "active"} }, "completed_quests": [...] }
-        Uses db.quests as the per-player collection (as requested).
-        """
         db = self.bot.db
         doc = await db.quests.find_one({"id": user_id})
         if not doc:
@@ -101,6 +81,50 @@ class QuestCog(commands.Cog):
     async def save_player_doc(self, doc: Dict[str, Any]) -> None:
         db = self.bot.db
         await db.quests.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
+
+    async def get_completed_quest_ids(self, user_id: int) -> List[str]:
+        pdoc = await self.get_player_doc(user_id)
+        completed = pdoc.get("completed_quests", []) or []
+        return list(completed)
+
+    async def get_unlocked_next_quests(self, user_id: int, tpl_or_id: Any) -> List[Dict[str, Any]]:
+        tpl: Optional[Dict[str, Any]] = None
+        if isinstance(tpl_or_id, str):
+            tpl = await self.get_template(tpl_or_id)
+        elif isinstance(tpl_or_id, dict):
+            tpl = tpl_or_id
+        if not tpl:
+            return []
+
+        next_ids: List[str] = []
+        if tpl.get("next_quests"):
+            if isinstance(tpl.get("next_quests"), list):
+                next_ids = tpl.get("next_quests")
+            else:
+                next_ids = [tpl.get("next_quests")]
+        elif tpl.get("next_quest"):
+            next_ids = [tpl.get("next_quest")]
+
+        if not next_ids:
+            return []
+
+        completed = set(await self.get_completed_quest_ids(user_id))
+
+        unlocked: List[Dict[str, Any]] = []
+        for nid in next_ids:
+            try:
+                cand = await self.get_template(nid)
+                if not cand:
+                    continue
+                prereqs = cand.get("prereqs", []) or []
+                if not isinstance(prereqs, list):
+                    prereqs = [prereqs]
+                if all(p in completed for p in prereqs):
+                    unlocked.append(cand)
+            except Exception:
+                continue
+
+        return unlocked
 
     @app_commands.command(name="quests", description="Show available & active quests.")
     async def quests(self, interaction: discord.Interaction) -> None:
@@ -113,7 +137,6 @@ class QuestCog(commands.Cog):
 
         embed = discord.Embed(title="📜 Quests", color=discord.Color.blurple())
 
-        # Active quests: each quest gets its own field with bullet-point objectives
         if active:
             for qid, pdata in active.items():
                 tpl = await self.get_template(qid)
@@ -123,21 +146,17 @@ class QuestCog(commands.Cog):
 
                 objs = tpl.get("objectives", [])
                 prog = pdata.get("objectives", {})
-                # Build bullet list lines
                 lines: List[str] = []
                 for o in objs:
                     key = f"{o['type']}:{o['target']}"
                     cur = prog.get(key, 0)
                     lines.append(_humanize_objective(o, cur, o["amount"]))
 
-                # Join lines with newline; ensure there's something to show
                 value_text = "\n".join(lines) if lines else "No objectives listed."
-                # Field name: quest title (show quest id in footer if desired)
                 embed.add_field(name=f"🟢 {tpl.get('title')}", value=value_text, inline=False)
         else:
             embed.add_field(name="🟢 Active", value="None", inline=False)
 
-        # Completed quests
         if completed_ids:
             completed_lines = []
             for qid in completed_ids:
@@ -149,14 +168,12 @@ class QuestCog(commands.Cog):
         else:
             embed.add_field(name="✅ Completed Quests", value="None", inline=False)
 
-        # Available quests
         templates = await self.list_templates()
         avail_lines: List[str] = []
         for tpl in templates:
             qid = tpl["quest_id"]
             if qid in completed or qid in active:
                 continue
-            # Skip quests that are npc_given
             if tpl.get("npc_given", False):
                 continue
             prereqs = set(tpl.get("prereqs", []))
@@ -192,22 +209,19 @@ class QuestCog(commands.Cog):
         if quest_id in pdoc.get("active_quests", {}) or quest_id in pdoc.get("completed_quests", []):
             return await interaction.followup.send("ℹ️ You already have or completed this quest.", ephemeral=True)
 
-        # check prereqs
         prereqs = set(tpl.get("prereqs", []))
         if prereqs - set(pdoc.get("completed_quests", [])):
             return await interaction.followup.send("⚠️ You don't meet quest prerequisites.", ephemeral=True)
 
-        # init progress map
         prog_map: Dict[str, int] = {}
         for o in tpl.get("objectives", []):
             prog_map[f"{o['type']}:{o['target']}"] = 0
 
         pdoc["active_quests"][quest_id] = {"objectives": prog_map, "status": "active"}
         await self.save_player_doc(pdoc)
-        await interaction.followup.send(f"✅ Quest **{tpl['title']}** accepted.", ephemeral=True)
+        await interaction.followup.send(f"✅ Quest **'{tpl['title']}'** accepted.", ephemeral=True)
 
     async def accept_for_player(self, user_id: int, quest_id: str) -> bool:
-        """Programmatically accept a quest for a player. Returns True on success."""
         tpl = await self.get_template(quest_id)
         if not tpl:
             return False
@@ -225,19 +239,12 @@ class QuestCog(commands.Cog):
         return True
 
     async def update_progress(self, user_id: int, objective_type: str, target: str, amount: int = 1) -> List[Dict[str, Any]]:
-        """
-        Update active quests for a player.
-        Enforces quest.sub_area gating: if template has a sub_area, progress only counts
-        if player is currently in that sub_area (based on db.areas).
-        Returns a list of completion events (each dict has quest_id and template).
-        """
         db = self.bot.db
         pdoc = await self.get_player_doc(user_id)
         active = pdoc.get("active_quests", {})
         if not active:
             return []
 
-        # fetch player's current location for gating
         area_doc = await db.areas.find_one({"id": user_id}) or {}
         current_sub = area_doc.get("currentSubarea")
 
@@ -248,14 +255,14 @@ class QuestCog(commands.Cog):
             tpl = await self.get_template(qid)
             if not tpl:
                 continue
-            # gating: if template specifies a sub_area, ensure player is in that subarea
             required_sub = tpl.get("sub_area")
             if required_sub:
                 if current_sub != required_sub:
-                    # skip this quest for progress if not in correct subarea
                     continue
 
             for o in tpl.get("objectives", []):
+                if o["type"] == "fetch":
+                    continue
                 if o["type"] != objective_type:
                     continue
                 if o["target"] != target:
@@ -267,7 +274,6 @@ class QuestCog(commands.Cog):
                     qstate["objectives"][key] = new
                     changed = True
 
-            # check overall completion for this quest
             all_done = True
             for o2 in tpl.get("objectives", []):
                 k2 = f"{o2['type']}:{o2['target']}"
@@ -275,23 +281,80 @@ class QuestCog(commands.Cog):
                     all_done = False
                     break
             if all_done:
-                # complete quest: move to completed_quests, remove from active
                 pdoc.setdefault("completed_quests", []).append(qid)
                 pdoc["active_quests"].pop(qid, None)
                 changed = True
-                # grant rewards
-                await self._grant_rewards(user_id, tpl.get("rewards", {}))
-                completions.append({"quest_id": qid, "template": tpl})
+                rewards_given = await self._grant_rewards(user_id, tpl.get("rewards", {}))
+                completions.append({"quest_id": qid, "template": tpl, "rewards": rewards_given})
 
         if changed:
             await self.save_player_doc(pdoc)
         return completions
 
-    async def _grant_rewards(self, user_id: int, rewards: Dict[str, Any]) -> None:
-        """Simple reward processing - adapt to your DB schema."""
+    async def can_turn_in(self, user_id: int, quest_id: str) -> Tuple[bool, List[Dict[str, Any]]]:
         db = self.bot.db
+        tpl = await self.get_template(quest_id)
+        if not tpl:
+            return False, []
+
+        fetch_objs = [o for o in tpl.get("objectives", []) if o.get("type") == "fetch"]
+        if not fetch_objs:
+            return False, []
+
+        inv_doc = await db.inventory.find_one({"id": user_id}) or {}
+        details: List[Dict[str, Any]] = []
+        can = True
+        for o in fetch_objs:
+            item = o["target"]
+            need = int(o["amount"])
+            have = int(inv_doc.get(item, 0) or 0)
+            details.append({"target": item, "need": need, "have": have})
+            if have < need:
+                can = False
+        return can, details
+
+    async def attempt_turnin(self, user_id: int, quest_id: str, npc_id: Optional[str] = None) -> Tuple[bool, str, List[Dict[str, Any]], Dict[str, Any]]:
+        db = self.bot.db
+        tpl = await self.get_template(quest_id)
+        if not tpl:
+            return False, "Quest template missing.", [], {}
+
+        pdoc = await self.get_player_doc(user_id)
+        if quest_id not in pdoc.get("active_quests", {}):
+            return False, "You don't have that quest active.", [], {}
+
+        can, details = await self.can_turn_in(user_id, quest_id)
+        if not can:
+            missing = [f"{d['target']} (need {d['need']}, have {d['have']})" for d in details if d['have'] < d['need']]
+            return False, "You are missing: " + ", ".join(missing), [], {}
+
+        inv_updates: Dict[str, int] = {}
+        for d in details:
+            item = d["target"]
+            need = d["need"]
+            inv_updates[item] = inv_updates.get(item, 0) - need
+
+        for item, delta in inv_updates.items():
+            await db.inventory.update_one({"id": user_id}, {"$inc": {item: delta}}, upsert=True)
+
+        pdoc.setdefault("completed_quests", []).append(quest_id)
+        pdoc["active_quests"].pop(quest_id, None)
+
+        rewards_given = await self._grant_rewards(user_id, tpl.get("rewards", {}))
+        await self.save_player_doc(pdoc)
+
+        unlocked_templates = await self.get_unlocked_next_quests(user_id, tpl)
+
+        title = tpl.get("title", quest_id)
+        msg = f"✅ Quest **{title}** turned in."
+        return True, msg, unlocked_templates, rewards_given
+
+    async def _grant_rewards(self, user_id: int, rewards: Dict[str, Any]) -> Dict[str, Any]:
+        db = self.bot.db
+        result: Dict[str, Any] = {"gold": 0, "items": [], "equipment": []}
         if not rewards:
-            return
+            return result
+
         if "gold" in rewards:
             rng = rewards["gold"]
             if isinstance(rng, list) and len(rng) == 2:
@@ -299,12 +362,20 @@ class QuestCog(commands.Cog):
             else:
                 amt = int(rng)
             await db.general.update_one({"id": user_id}, {"$inc": {"wallet": amt}}, upsert=True)
+            result["gold"] = amt
+
         if "items" in rewards:
             for it in rewards["items"]:
                 await db.inventory.update_one({"id": user_id}, {"$inc": {it: 1}}, upsert=True)
+                result["items"].append({"id": it, "qty": 1})
+
         if "equipment" in rewards:
-            pass
-            #! ADD FUNCTIONALITY
+            for eq in rewards["equipment"]:
+                # placeholder for equipment handling; still record to result
+                result["equipment"].append(eq)
+                # implement actual equipment add when you support instanced equipment
+        return result
+
 
 async def setup(bot: commands.Bot) -> None:
     from settings import GUILD_ID

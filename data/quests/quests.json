@@ -13,22 +13,98 @@
       ],
       "rewards": { "gold": [5, 10], "items": [], "equipment": [] },
       "prereqs": [],
-      "next_quest": "blacksmith_tutorial_1"
+      "next_quests": ["settling_in"]
     },
+
+    {
+      "quest_id": "settling_in",
+      "title": "Settling In",
+      "description": "After arriving in Lynthaven, you're told to meet Elder Myla, who oversees newcomers. She wishes to speak with you about the land and its people.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "shady_shack",
+      "objectives": [
+        { "type": "talk", "target": "elder_myla", "amount": 1 }
+      ],
+      "rewards": { "gold": [5, 10], "items": [], "equipment": [] },
+      "prereqs": ["wayfarers_welcome"],
+      "next_quests": ["explore_emberveil"]
+    },
+
+    {
+      "quest_id": "crafting_basics_intro",
+      "title": "Resources of the Plains",
+      "description": "Elder Myla asks you to gather a sampling of natural resources before visiting Holger. She says it's good to learn what's available in the wild.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "meadow",
+      "objectives": [
+        { "type": "collect", "target": "wood", "amount": 10 },
+        { "type": "collect", "target": "ore", "amount": 10 },
+        { "type": "collect", "target": "herb", "amount": 5 }
+      ],
+      "rewards": { "gold": [15, 25], "items": [], "equipment": [] },
+      "prereqs": ["settling_in"],
+      "next_quests": ["blacksmith_tutorial_1"],
+      "npc_given": true
+    },
+
     {
       "quest_id": "blacksmith_tutorial_1",
       "title": "Forging Foundations",
-      "description": "Holger wants you to gather 50 mineable materials from around Lynthaven. This will help you unlock the Mining Collection 1 and understand how crafting works.",
+      "description": "Holger wants you to gather 40 mineable materials from around Lynthaven. This will help you unlock the Mining Collection 1 and understand how crafting works.",
       "type": "main",
       "area": "plains",
       "sub_area": "lynthaven",
       "objectives": [
-        { "type": "collect", "target": "any_mineable", "amount": 50 }
+        { "type": "collect", "target": "ore", "amount": 40 }
       ],
       "rewards": { "gold": [50, 100], "items": [], "equipment": [] },
-      "prereqs": ["wayfarers_welcome"],
-      "next_quest": null
+      "prereqs": ["crafting_basics_intro"],
+      "next_quests": []
     },
+
+    {
+      "quest_id": "explore_emberveil",
+      "title": "Journey to Emberveil",
+      "description": "Elder Myla suggests you explore Emberveil, a larger settlement to the east. It's a good opportunity to familiarize yourself with the area and its inhabitants.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "emberveil",
+      "objectives": [
+        { "type": "explore", "target": "emberveil", "amount": 1 }
+      ],
+      "rewards": { "gold": [10, 20], "items": [], "equipment": [] },
+      "prereqs": ["settling_in"],
+      "next_quests": ["combat_intro_1"]
+    },
+
+    {
+      "quest_id": "combat_intro_1",
+      "title": "The Emberveil Ranger",
+      "description": "Locals in the Meadow mention a retired ranger living in Emberveil who teaches combat. Perhaps he can show you the ropes.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "emberveil",
+      "objectives": [
+        { "type": "talk", "target": "retired_ranger_ronan", "amount": 1 }
+      ],
+      "rewards": { "gold": [5, 10], "items": [], "equipment": [] },
+      "prereqs": ["blacksmith_tutorial_1", "explore_emberveil"],
+      "next_quests": []
+    },
+
+
+
+
+
+
+
+
+
+
+
+
     {
       "quest_id": "pond_fishing_intro",
       "title": "First Cast",
@@ -41,7 +117,41 @@
       ],
       "rewards": { "gold": [10, 20], "items": [], "equipment": [] },
       "prereqs": [],
-      "next_quest": null,
+      "next_quests": [],
+      "npc_given": true
+    },
+
+    {
+      "quest_id": "foraging_intro",
+      "title": "Wood for the Road",
+      "description": "A villager in Lynthaven asks for some oak for repairs. A simple task that teaches the basics of foraging.",
+      "type": "side",
+      "area": "plains",
+      "sub_area": "thicket",
+      "objectives": [
+        { "type": "collect", "target": "wood", "amount": 15 },
+        { "type": "collect", "target": "silverleaf", "amount": 5 }
+      ],
+      "rewards": { "gold": [10, 20], "items": [], "equipment": [] },
+      "prereqs": [],
+      "next_quests": [],
+      "npc_given": true
+    },
+
+    {
+      "quest_id": "farming_intro",
+      "title": "A Farmer’s Favor",
+      "description": "A local farmer asks for a bit of wheat or carrots. A good way to learn farming fundamentals.",
+      "type": "side",
+      "area": "plains",
+      "sub_area": "meadow",
+      "objectives": [
+        { "type": "fetch", "target": "wheat", "amount": 10 },
+        { "type": "fetch", "target": "carrot", "amount": 10 }
+      ],
+      "rewards": { "gold": [10, 15], "items": [], "equipment": [] },
+      "prereqs": [],
+      "next_quests": [],
       "npc_given": true
     }
   ]
