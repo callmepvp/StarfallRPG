@@ -195,7 +195,15 @@ class RegisterCog(commands.Cog):
                 "herb": 0, "herbLevel": 0,
                 "fish": 0, "fishLevel": 0,
             })
-            await db.recipes.insert_one({"id": user_id, "toolrod": True})
+            await db.recipes.insert_one({
+                "id": user_id,
+                "toolrod": True,
+                "wooden helmet": True,
+                "wooden chestplate": True,
+                "wooden leggings": True,
+                "wooden boots": True,
+                "wooden gloves": True,
+            })
 
             ## SETUP THE EQUIPPED TOOLS AND INSTANCES
             instances = []
@@ -233,10 +241,17 @@ class RegisterCog(commands.Cog):
                 "chest": None,
                 "legs": None,
                 "feet": None,
+                "gloves": None,
                 "mainHand": None,
                 "offHand": None,
-                "accessory1": None,
-                "accessory2": None,
+                "talisman1": None,
+                "talisman2": None,
+                "talisman3": None,
+                "charm1": None,
+                "charm2": None,
+                "ring1": None,
+                "ring2": None,
+                "amulet": None,
                 # action tools point to instance_ids created above
                 "fishingTool": slot_refs["fishingTool"],
                 "miningTool": slot_refs["miningTool"],

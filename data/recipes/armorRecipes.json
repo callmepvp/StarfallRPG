@@ -1,0 +1,114 @@
+{
+  "wooden helmet": [
+    {
+      "0": "oak",
+      "1": "binding",
+      "2": "spider silk",
+      "r0": "4",
+      "r1": "1",
+      "r2": "2"
+    }
+  ],
+
+  "wooden chestplate": [
+    {
+      "0": "oak",
+      "1": "binding",
+      "2": "spider silk",
+      "3": "animal bone",
+      "r0": "8",
+      "r1": "2",
+      "r2": "4",
+      "r3": "2"
+    }
+  ],
+
+  "wooden leggings": [
+    {
+      "0": "oak",
+      "1": "binding",
+      "2": "spider silk",
+      "r0": "6",
+      "r1": "2",
+      "r2": "3"
+    }
+  ],
+
+  "wooden boots": [
+    {
+      "0": "oak",
+      "1": "binding",
+      "r0": "3",
+      "r1": "1"
+    }
+  ],
+
+  "wooden gloves": [
+    {
+      "0": "oak",
+      "1": "spider silk",
+      "r0": "2",
+      "r1": "2"
+    }
+  ],
+
+
+  "miners helmet": [
+    {
+      "0": "stone",
+      "1": "coal",
+      "2": "boar leather",
+      "3": "miningEssence",
+      "r0": "5",
+      "r1": "3",
+      "r2": "2",
+      "r3": "5"
+    }
+  ],
+
+  "miners chestplate": [
+    {
+      "0": "stone",
+      "1": "coal",
+      "2": "boar leather",
+      "3": "pickaxe mold",
+      "4": "miningEssence",
+      "r0": "10",
+      "r1": "5",
+      "r2": "4",
+      "r3": "1",
+      "r4": "8"
+    }
+  ],
+
+  "miners leggings": [
+    {
+      "0": "stone",
+      "1": "coal",
+      "2": "boar leather",
+      "3": "miningEssence",
+      "r0": "7",
+      "r1": "4",
+      "r2": "3",
+      "r3": "6"
+    }
+  ],
+
+  "miners boots": [
+    {
+      "0": "stone",
+      "1": "boar leather",
+      "r0": "4",
+      "r1": "2"
+    }
+  ],
+
+  "miners gloves": [
+    {
+      "0": "coal",
+      "1": "boar leather",
+      "r0": "2",
+      "r1": "2"
+    }
+  ]
+}

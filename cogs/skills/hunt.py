@@ -1,5 +1,6 @@
 import random
 import datetime
+import json
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -10,6 +11,19 @@ from discord.ext import commands
 from server.userMethods import regenerate_stamina, calculate_power_rating
 
 from settings import GUILD_ID
+
+# Load armor templates and set bonuses
+_ARMOR_TEMPLATES_PATH = Path("data/armorTemplates.json")
+_SET_BONUSES_PATH = Path("data/setBonuses.json")
+
+armor_templates: Dict[str, Any] = {}
+set_bonuses_config: Dict[str, Any] = {}
+
+if _ARMOR_TEMPLATES_PATH.exists():
+    armor_templates = json.loads(_ARMOR_TEMPLATES_PATH.read_text(encoding="utf-8"))
+
+if _SET_BONUSES_PATH.exists():
+    set_bonuses_config = json.loads(_SET_BONUSES_PATH.read_text(encoding="utf-8"))
 
 # Load mobs data
 _MOBS_PATH = Path("data/huntMobs.json")
@@ -73,6 +87,53 @@ class CombatCog(commands.Cog):
                 mobs.append((mob_id, mob_info))
 
         return mobs
+    
+    async def _get_armor_and_set_bonuses(self, user_id: int) -> Dict[str, int]:
+        """Calculate total bonuses from equipped armor and set bonuses."""
+        db = self.bot.db
+        equip_doc = await db.equipment.find_one({"id": user_id}) or {}
+        
+        bonuses = {
+            "HP": 0,
+            "STR": 0,
+            "DEF": 0,
+            "EVA": 0
+        }
+        
+        # 1. Calculate bonuses from individual armor pieces
+        armor_slots = ["head", "chest", "legs", "feet", "gloves"]
+        for slot in armor_slots:
+            instance_id = equip_doc.get(slot)
+            if instance_id:
+                instance = next((inst for inst in equip_doc.get("instances", []) 
+                            if inst.get("instance_id") == instance_id), None)
+                if instance and instance.get("stats"):
+                    stats = instance.get("stats", {})
+                    for stat, value in stats.items():
+                        if stat in bonuses:
+                            bonuses[stat] += value
+        
+        # 2. Calculate bonuses from set bonuses
+        set_counts = {}
+        for slot in armor_slots:
+            instance_id = equip_doc.get(slot)
+            if instance_id:
+                instance = next((inst for inst in equip_doc.get("instances", []) 
+                            if inst.get("instance_id") == instance_id), None)
+                if instance and instance.get("set"):
+                    set_name = instance["set"]
+                    set_counts[set_name] = set_counts.get(set_name, 0) + 1
+        
+        for set_name, count in set_counts.items():
+            set_config = set_bonuses_config.get(set_name, {})
+            for threshold in ["2", "4", "5"]:
+                if count >= int(threshold) and threshold in set_config:
+                    threshold_bonuses = set_config[threshold]
+                    for stat, value in threshold_bonuses.items():
+                        if stat in bonuses:
+                            bonuses[stat] += value
+        
+        return bonuses
 
     async def _calculate_stats(self, user_id: int) -> Dict[str, int]:
         """Calculate player's combat stats with proper HP handling."""
@@ -80,15 +141,18 @@ class CombatCog(commands.Cog):
         general = await db.general.find_one({"id": user_id})
         skills = await db.skills.find_one({"id": user_id})
         
-        max_hp = general["maxHP"]
+        # Get armor and set bonuses
+        equipment_bonuses = await self._get_armor_and_set_bonuses(user_id)
+        
+        max_hp = general["maxHP"] + equipment_bonuses["HP"]  # Add HP bonus to max HP
         current_hp = min(general["hp"], max_hp)  # Ensure HP doesn't exceed max
         
         return {
             "current_hp": current_hp,
             "max_hp": max_hp,
-            "str": general["strength"] + skills["combatLevel"] * 2,
-            "def": general["defense"] + skills["miningLevel"] * 1,
-            "eva": general["evasion"] + skills["foragingLevel"] * 1,
+            "str": general["strength"] + skills["combatLevel"] * 2 + equipment_bonuses["STR"],
+            "def": general["defense"] + skills["miningLevel"] * 1 + equipment_bonuses["DEF"],
+            "eva": general["evasion"] + skills["foragingLevel"] * 1 + equipment_bonuses["EVA"],
             "acc": general["accuracy"] + skills["combatLevel"] * 2
         }
 
@@ -118,20 +182,27 @@ class CombatCog(commands.Cog):
             leveled_up = True
         
         if leveled_up:
-            # Update skills collection
+            levels_gained = new_level - old_level
+            
+            # Update skills collection with combatBonus
             await db.skills.update_one(
                 {"id": user_id},
                 {"$set": {
                     "combatLevel": new_level,
                     "combatXP": total_xp
+                },
+                "$inc": {
+                    "combatBonus": levels_gained * 2  # Add combatBonus
                 }}
             )
             
-            # Update max HP in general collection
-            levels_gained = new_level - old_level
+            # Update max HP and strength in general collection
             await db.general.update_one(
                 {"id": user_id},
-                {"$inc": {"maxHP": levels_gained * 5}}
+                {"$inc": {
+                    "maxHP": levels_gained * 5,
+                    "strength": levels_gained * 2  # Add strength
+                }}
             )
         
         return (new_level - old_level, new_level, leveled_up)
@@ -235,9 +306,10 @@ class CombatCog(commands.Cog):
         w_skill = float(weapon_stats.get("SKILL", 0) or 0)
         weapon_skill_bonus = w_skill
 
-        # apply weapon STR/EVA to the runtime-only player stats (do NOT persist as requested)
+        # apply weapon STR/EVA and armor bonuses to the runtime-only player stats
         player_stats["str"] = int(player_stats["str"] + round(w_str))
         player_stats["eva"] = int(player_stats["eva"] + round(w_eva))
+        player_stats["def"] = int(player_stats["def"])  # DEF already includes armor bonuses
 
         combat_log = []
         # keep track of whether we got crits for log messages
@@ -352,8 +424,9 @@ class CombatCog(commands.Cog):
                 name="🎖️ Combat Level Up!",
                 value=(
                     f"You're now Combat Level **{new_level}**!\n"
-                    f"❤️ +{levels_gained*5} Max HP\n"
-                    f"💪 +{levels_gained*2} Strength"
+                    f"❤️ +{levels_gained*5} Max HP!\n"
+                    f"💪 +{levels_gained*2} Strength!\n"
+                    f"⚔️ +{levels_gained*2} Combat Bonus!"
                 ),
                 inline=False
             )

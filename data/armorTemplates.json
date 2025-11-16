@@ -1,0 +1,146 @@
+{
+  "Wooden Helmet": {
+    "name": "Wooden Helmet",
+    "emoji": "🪖",
+    "type": "armor",
+    "equip_slots": ["head"],
+    "tier": "wood",
+    "set": "Wooden Armor",
+    "xp": 7,
+    "stats": {
+      "HP": 5,
+      "DEF": 2
+    },
+    "description": "A basic wooden helmet. Better than nothing, but not by much."
+  },
+  "Wooden Chestplate": {
+    "name": "Wooden Chestplate", 
+    "emoji": "🛡️",
+    "type": "armor",
+    "equip_slots": ["chest"],
+    "tier": "wood",
+    "set": "Wooden Armor",
+    "xp": 12,
+    "stats": {
+      "HP": 10,
+      "DEF": 5
+    },
+    "description": "Wooden plates strapped together. Surprisingly sturdy for being made of wood."
+  },
+  "Wooden Leggings": {
+    "name": "Wooden Leggings",
+    "emoji": "🦵",
+    "type": "armor", 
+    "equip_slots": ["legs"],
+    "tier": "wood",
+    "set": "Wooden Armor",
+    "xp": 10,
+    "stats": {
+      "HP": 7,
+      "DEF": 3
+    },
+    "description": "Wooden leg guards that make walking slightly more challenging."
+  },
+  "Wooden Boots": {
+    "name": "Wooden Boots",
+    "emoji": "👢", 
+    "type": "armor",
+    "equip_slots": ["feet"],
+    "tier": "wood",
+    "set": "Wooden Armor",
+    "xp": 8,
+    "stats": {
+      "HP": 4,
+      "DEF": 2,
+      "EVA": 1
+    },
+    "description": "Clunky wooden footwear. At least they're durable."
+  },
+  "Wooden Gloves": {
+    "name": "Wooden Gloves",
+    "emoji": "🧤",
+    "type": "armor",
+    "equip_slots": ["gloves"], 
+    "tier": "wood",
+    "set": "Wooden Armor",
+    "xp": 6,
+    "stats": {
+      "HP": 3,
+      "DEF": 1,
+      "EVA": 1
+    },
+    "description": "Wooden hand protection. Great for splinters, terrible for dexterity."
+  },
+  "Miner's Helmet": {
+    "name": "Miner's Helmet",
+    "emoji": "⛑️",
+    "type": "armor",
+    "equip_slots": ["head"],
+    "tier": "stone", 
+    "set": "Miner's Set",
+    "xp": 10,
+    "stats": {
+      "HP": 8,
+      "DEF": 3
+    },
+    "description": "A sturdy helmet with a built-in lamp. Essential for mining in dark caves."
+  },
+  "Miner's Chestplate": {
+    "name": "Miner's Chestplate",
+    "emoji": "🦺",
+    "type": "armor",
+    "equip_slots": ["chest"],
+    "tier": "stone",
+    "set": "Miner's Set", 
+    "xp": 15,
+    "stats": {
+      "HP": 12,
+      "DEF": 6
+    },
+    "description": "Reinforced chest protection with extra pockets for carrying ores."
+  },
+  "Miner's Leggings": {
+    "name": "Miner's Leggings",
+    "emoji": "👖",
+    "type": "armor",
+    "equip_slots": ["legs"],
+    "tier": "stone",
+    "set": "Miner's Set",
+    "xp": 12,
+    "stats": {
+      "HP": 10, 
+      "DEF": 4
+    },
+    "description": "Durable leggings that protect against falling rocks and debris."
+  },
+  "Miner's Boots": {
+    "name": "Miner's Boots",
+    "emoji": "👞",
+    "type": "armor",
+    "equip_slots": ["feet"],
+    "tier": "stone",
+    "set": "Miner's Set",
+    "xp": 10,
+    "stats": {
+      "HP": 6,
+      "DEF": 3, 
+      "EVA": 2
+    },
+    "description": "Steel-toed boots that protect your feet in treacherous mines."
+  },
+  "Miner's Gloves": {
+    "name": "Miner's Gloves", 
+    "emoji": "🧤",
+    "type": "armor",
+    "equip_slots": ["gloves"],
+    "tier": "stone",
+    "set": "Miner's Set",
+    "xp": 8,
+    "stats": {
+      "HP": 5,
+      "DEF": 2,
+      "EVA": 1
+    },
+    "description": "Reinforced gloves that protect your hands while handling rough ores and tools."
+  }
+}

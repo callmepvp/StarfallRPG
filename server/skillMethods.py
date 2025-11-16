@@ -137,13 +137,13 @@ async def apply_gather_results(
     old_lvl = int(skill_doc.get(f"{skill_prefix}Level", 0))
 
     new_xp = old_xp + xp_gain
-    lvl_threshold = 50 * old_lvl + 10
+    lvl_thr = 50 * old_lvl + 10
 
     skill_leveled = False
     new_level = None
-    if new_xp >= lvl_threshold:
+    if new_xp >= lvl_thr:
         skill_leveled = True
-        leftover = new_xp - lvl_threshold
+        leftover = new_xp - lvl_thr
         new_level = old_lvl + 1
         await db.skills.update_one(
             {"id": user_id},
@@ -152,6 +152,24 @@ async def apply_gather_results(
                 "$inc": {f"{skill_prefix}Bonus": skill_bonus_inc}
             }
         )
+        
+        # Update combat stats in general document based on skill type
+        combat_stat_updates = {}
+        if skill_prefix == "mining":
+            combat_stat_updates = {"defense": 2}
+        elif skill_prefix == "foraging":
+            combat_stat_updates = {"strength": 2}
+        elif skill_prefix == "scavenging":
+            combat_stat_updates = {"evasion": 2}
+        elif skill_prefix == "fishing":
+            combat_stat_updates = {"accuracy": 2}
+        # Note: farming doesn't increase combat stats
+        
+        if combat_stat_updates:
+            await db.general.update_one(
+                {"id": user_id},
+                {"$inc": combat_stat_updates}
+            )
     else:
         await db.skills.update_one({"id": user_id}, {"$set": {f"{skill_prefix}XP": new_xp}})
 

@@ -16,21 +16,41 @@ from server.userMethods import regenerate_stamina, calculate_power_rating
 # Load manifests once at import time
 _ITEMS_PATH = Path("data/items.json")
 _RECIPES_PATH = Path("data/recipes/craftingRecipes.json")
+_ARMOR_RECIPES_PATH = Path("data/recipes/armorRecipes.json")  # Add armor recipes path
 
 _items_data: Dict[str, Any] = {}
 _recipes_data: Dict[str, List[Dict[str, str]]] = {}
+_armor_recipes_data: Dict[str, List[Dict[str, str]]] = {}
 
 if _ITEMS_PATH.exists():
     _items_data = json.loads(_ITEMS_PATH.read_text(encoding="utf-8")).get("items", {})
 
+# Load both regular crafting recipes AND armor recipes
 if _RECIPES_PATH.exists():
     _recipes_data = json.loads(_RECIPES_PATH.read_text(encoding="utf-8"))
 
-# Load item templates for instanced items
+if _ARMOR_RECIPES_PATH.exists():
+    _armor_recipes_data = json.loads(_ARMOR_RECIPES_PATH.read_text(encoding="utf-8"))
+
+# Combine all recipes into one dictionary
+all_recipes_data = {**_recipes_data, **_armor_recipes_data}
+
+# Load ALL template files for instanced items
 _ITEM_TEMPLATES_PATH = Path("data/itemTemplates.json")
-item_templates: Dict[str, Any] = {}
+_ARMOR_TEMPLATES_PATH = Path("data/armorTemplates.json")
+
+# Dictionary to hold ALL templates from all files
+all_templates: Dict[str, Any] = {}
+
+# Load item templates (weapons, tools)
 if _ITEM_TEMPLATES_PATH.exists():
     item_templates = json.loads(_ITEM_TEMPLATES_PATH.read_text(encoding="utf-8"))
+    all_templates.update(item_templates)
+
+# Load armor templates
+if _ARMOR_TEMPLATES_PATH.exists():
+    armor_templates = json.loads(_ARMOR_TEMPLATES_PATH.read_text(encoding="utf-8"))
+    all_templates.update(armor_templates)
 
 #! basically a duplicate of the one in register.py
 def make_short_id() -> str:
@@ -82,16 +102,13 @@ class CraftingCog(commands.Cog):
             return False, "❌ You need to `/register` first!", 0
         
         if profile.get("inDungeon", False):
-            return await interaction.response.send_message(
-                "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.",
-                ephemeral=True
-            )
+            return False, "❌ You can't do this while in a dungeon! Complete or flee from your dungeon first.", 0
         
         if profile.get("stamina", 0) <= 0:
             return False, "😴 Not enough stamina to craft right now.", 0
 
-        # 2) Lookup recipe
-        recipe_list = _recipes_data.get(recipe_key.lower())
+        # 2) Lookup recipe in COMBINED recipes (both regular and armor)
+        recipe_list = all_recipes_data.get(recipe_key.lower())
         if not recipe_list:
             return False, f"❌ No recipe for **{recipe_key}**.", 0
         recipe = recipe_list[0]  # assume one definition
@@ -145,15 +162,18 @@ class CraftingCog(commands.Cog):
             await col.update_one({"id": user_id}, {"$inc": {ing: -req}})
 
         # 4) Give the crafted item OR create instances if it's a templated item
-        # Try to find a matching template (case-insensitive)
+        # Try to find a matching template in ALL templates (case-insensitive)
         template_name = None
-        for tname in item_templates.keys():
+        template_data = None
+        
+        for tname, tdata in all_templates.items():
             if tname.lower() == recipe_key.lower():
                 template_name = tname
+                template_data = tdata
                 break
 
         created_instance_ids: List[str] = []
-        if template_name:
+        if template_name and template_data:
             # We're crafting an equippable/instanced item. Create `amount` instances.
             now = int(time.time())
             # Fetch player's equipment doc to check used_ids and instances
@@ -166,8 +186,6 @@ class CraftingCog(commands.Cog):
             existing_ids = {inst.get("instance_id") for inst in (equip_doc.get("instances") or []) if inst.get("instance_id")}
             used_ids.update(existing_ids)
 
-            template_data = item_templates[template_name]
-
             # create amount instances, storing each in equipment.instances and used_ids
             for _i in range(amount):
                 # generate unique short id
@@ -179,19 +197,52 @@ class CraftingCog(commands.Cog):
                     # fallback to longer id if we couldn't find a short unique id
                     iid = f"I{int(time.time()*1000)}"
 
-                tmpl = template_data or {}
-
-                inst_doc = {
-                    "instance_id": iid,
-                    "template": template_name,
-                    "enchants": [],
-                    "custom_name": None,
-                    "bound": False,
-                    "created_at": now,
-                    "slots": tmpl.get("equip_slots", []) if isinstance(tmpl.get("equip_slots", []), list) else [],
-                    "stats": tmpl.get("stats", {}).copy() if isinstance(tmpl.get("stats", {}), dict) else {},
-                    "tier": tmpl.get("tier", None)
-                }
+                # Build the instance document based on item type
+                item_type = template_data.get("type", "")
+                
+                if item_type == "armor":
+                    # Armor instance document
+                    inst_doc = {
+                        "instance_id": iid,
+                        "template": template_name,
+                        "enchants": [],
+                        "custom_name": None,
+                        "bound": False,
+                        "created_at": now,
+                        "slots": template_data.get("equip_slots", []) if isinstance(template_data.get("equip_slots", []), list) else [],
+                        "stats": template_data.get("stats", {}).copy() if isinstance(template_data.get("stats", {}), dict) else {},
+                        "tier": template_data.get("tier", None),
+                        "set": template_data.get("set", None),  # Armor sets
+                        "type": "armor"  # Explicit type for easy filtering
+                    }
+                elif item_type in ["tool", "weapon"]:
+                    # Tool/Weapon instance document  
+                    inst_doc = {
+                        "instance_id": iid,
+                        "template": template_name,
+                        "enchants": [],
+                        "custom_name": None,
+                        "bound": False,
+                        "created_at": now,
+                        "slots": template_data.get("equip_slots", []) if isinstance(template_data.get("equip_slots", []), list) else [],
+                        "stats": template_data.get("stats", {}).copy() if isinstance(template_data.get("stats", {}), dict) else {},
+                        "tier": template_data.get("tier", None),
+                        "type": item_type  # Explicit type for easy filtering
+                    }
+                else:
+                    # Generic instance for other equippable types
+                    inst_doc = {
+                        "instance_id": iid,
+                        "template": template_name,
+                        "enchants": [],
+                        "custom_name": None,
+                        "bound": False,
+                        "created_at": now,
+                        "slots": template_data.get("equip_slots", []) if isinstance(template_data.get("equip_slots", []), list) else [],
+                        "stats": template_data.get("stats", {}).copy() if isinstance(template_data.get("stats", {}), dict) else {},
+                        "tier": template_data.get("tier", None),
+                        "type": item_type if item_type else "misc"
+                    }
 
                 # push the instance into equipment doc
                 await db.equipment.update_one(
@@ -211,9 +262,14 @@ class CraftingCog(commands.Cog):
             # reduce stamina
             await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
 
-        # 5) Compute XP = sum of all reqs
-        item_info = _items_data.get(recipe_key.lower(), {})
-        xp_gain = item_info.get("xp", 0) * amount
+        # 5) Compute XP - check both template data AND items data
+        if template_data:
+            # Use XP from template for instance items
+            xp_gain = template_data.get("xp", 0) * amount
+        else:
+            # Use XP from items.json for regular items
+            item_info = _items_data.get(recipe_key.lower(), {})
+            xp_gain = item_info.get("xp", 0) * amount
 
         # 6) Update crafting skill
         sk = await db.skills.find_one({"id": user_id})
@@ -247,7 +303,7 @@ class CraftingCog(commands.Cog):
             msg_lines.append(f"⭐ Gained **{xp_gain}** Crafting XP!")
 
         if leveled:
-            msg_lines.append(f"🏅 Crafting Level Up! You’re now level **{old_lvl + 1}**!")
+            msg_lines.append(f"🏅 Crafting Level Up! You're now level **{old_lvl + 1}**!")
 
         return True, "\n".join(msg_lines), xp_gain
 

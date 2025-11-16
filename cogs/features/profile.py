@@ -1,5 +1,7 @@
 import datetime
 from typing import Any, Dict, List
+from pathlib import Path
+import json
 
 import discord
 from discord import app_commands
@@ -35,6 +37,79 @@ class ProfileCog(commands.Cog):
                 weapon_stats = inst.get("stats") or {}
         return weapon_stats
 
+    async def _get_armor_bonuses(self, user_id: int) -> Dict[str, int]:
+        """Returns total bonuses from all equipped armor pieces."""
+        db = self.bot.db
+        equip_doc = await db.equipment.find_one({"id": user_id}) or {}
+        
+        armor_bonuses = {
+            "HP": 0,
+            "STR": 0,
+            "DEF": 0,
+            "EVA": 0
+        }
+        
+        # Check each armor slot
+        armor_slots = ["head", "chest", "legs", "feet", "gloves"]
+        for slot in armor_slots:
+            instance_id = equip_doc.get(slot)
+            if instance_id:
+                instance = next((it for it in equip_doc.get("instances", []) if it.get("instance_id") == instance_id), None)
+                if instance and instance.get("stats"):
+                    stats = instance.get("stats", {})
+                    for stat, value in stats.items():
+                        if stat in armor_bonuses:
+                            armor_bonuses[stat] += value
+        
+        return armor_bonuses
+
+    async def _get_set_bonuses(self, user_id: int) -> Dict[str, int]:
+        """Returns set bonuses from equipped armor sets."""
+        db = self.bot.db
+        equip_doc = await db.equipment.find_one({"id": user_id}) or {}
+        
+        # Load set bonuses configuration
+        _SET_BONUSES_PATH = Path("data/setBonuses.json")
+        set_bonuses_config = {}
+        if _SET_BONUSES_PATH.exists():
+            set_bonuses_config = json.loads(_SET_BONUSES_PATH.read_text(encoding="utf-8"))
+        
+        # Count pieces per set from equipped armor
+        set_counts = {}
+        armor_slots = ["head", "chest", "legs", "feet", "gloves"]
+        
+        for slot in armor_slots:
+            instance_id = equip_doc.get(slot)
+            if instance_id:
+                instance = next((inst for inst in equip_doc.get("instances", []) 
+                            if inst.get("instance_id") == instance_id), None)
+                if instance and instance.get("set"):
+                    set_name = instance["set"]
+                    set_counts[set_name] = set_counts.get(set_name, 0) + 1
+        
+        # Calculate total set bonuses
+        total_bonuses = {
+            "HP": 0,
+            "STR": 0, 
+            "DEF": 0,
+            "EVA": 0
+        }
+        
+        for set_name, count in set_counts.items():
+            set_config = set_bonuses_config.get(set_name, {})
+            
+            # Check each threshold (2, 4, 5 pieces) and apply bonuses if met
+            for threshold in ["2", "4", "5"]:
+                if count >= int(threshold) and threshold in set_config:
+                    threshold_bonuses = set_config[threshold]
+                    
+                    # Only add combat stats (HP, STR, DEF, EVA)
+                    for stat, value in threshold_bonuses.items():
+                        if stat in total_bonuses:
+                            total_bonuses[stat] += value
+        
+        return total_bonuses
+
     @app_commands.command(
         name="profile",
         description="Show your Starfall RPG profile."
@@ -51,9 +126,18 @@ class ProfileCog(commands.Cog):
                 "❌ You need to `/register` first.", ephemeral=True
             )
 
+        # Get equipment bonuses
         weapon_stats = await self._get_weapon_stats(user_id)
-        w_str = int(weapon_stats.get("STR", 0) or 0)
-        w_eva = int(weapon_stats.get("EVA", 0) or 0)
+        armor_bonuses = await self._get_armor_bonuses(user_id)
+        set_bonuses = await self._get_set_bonuses(user_id)
+        
+        # Calculate total bonuses
+        total_bonuses = {
+            "HP": armor_bonuses["HP"] + set_bonuses["HP"],
+            "STR": weapon_stats.get("STR", 0) + armor_bonuses["STR"] + set_bonuses["STR"],
+            "DEF": armor_bonuses["DEF"] + set_bonuses["DEF"],
+            "EVA": weapon_stats.get("EVA", 0) + armor_bonuses["EVA"] + set_bonuses["EVA"]
+        }
 
         # Account info
         display_name = gen.get("name", interaction.user.display_name)
@@ -77,17 +161,19 @@ class ProfileCog(commands.Cog):
         evasion = gen.get("evasion", 0)
         accuracy = gen.get("accuracy", 0)
 
-        # Apply weapon bonuses on-the-fly
-        str_display = f"{strength} (+{w_str})" if w_str else f"{strength}"
-        eva_display = f"{evasion} (+{w_eva})" if w_eva else f"{evasion}"
+        # Apply all bonuses for display
+        str_display = f"{strength} (+{total_bonuses['STR']})" if total_bonuses['STR'] else f"{strength}"
+        def_display = f"{defense} (+{total_bonuses['DEF']})" if total_bonuses['DEF'] else f"{defense}"
+        eva_display = f"{evasion} (+{total_bonuses['EVA']})" if total_bonuses['EVA'] else f"{evasion}"
+        acc_display = f"{accuracy}"
 
-        # Calculate dynamic power rating including weapon bonuses
+        # Calculate dynamic power rating including all bonuses
         dynamic_stats = {
-            "strength": strength + w_str,
-            "defense": defense,
-            "evasion": evasion + w_eva,
+            "strength": strength + total_bonuses['STR'],
+            "defense": defense + total_bonuses['DEF'],
+            "evasion": evasion + total_bonuses['EVA'],
             "accuracy": accuracy,
-            "maxHP": max_hp
+            "maxHP": max_hp  # HP bonuses are already applied to maxHP
         }
         power_rating = calculate_power_rating(dynamic_stats)
 
@@ -126,9 +212,9 @@ class ProfileCog(commands.Cog):
 
         embed.add_field(name="❤️ HP", value=f"{hp}/{max_hp}", inline=True)
         embed.add_field(name="💥 Strength", value=str_display, inline=True)
-        embed.add_field(name="🛡️ Defense", value=f"{defense}", inline=True)
+        embed.add_field(name="🛡️ Defense", value=def_display, inline=True)
         embed.add_field(name="🌀 Evasion", value=eva_display, inline=True)
-        embed.add_field(name="🎯 Accuracy", value=f"{accuracy}", inline=True)
+        embed.add_field(name="🎯 Accuracy", value=acc_display, inline=True)
         embed.add_field(name="\u200b", value="\u200b", inline=True)  # Spacer
 
         embed.add_field(name="✨ Essences", value="\n".join(essences), inline=False)

@@ -61,7 +61,7 @@
       ],
       "rewards": { "gold": [50, 100], "items": [], "equipment": [] },
       "prereqs": ["crafting_basics_intro"],
-      "next_quests": []
+      "next_quests": ["blacksmith_tutorial_2"]
     },
 
     {
@@ -170,7 +170,7 @@
     {
       "quest_id": "foraging_intro",
       "title": "Wood for the Road",
-      "description": "A villager in Lynthaven asks for some oak for repairs. A simple task that teaches the basics of foraging.",
+      "description": "A villager in Lynthaven wants you to collect some oak for repairs. I'm not sure if he actually wants the wood for himself, but you should collect it regardless! A simple task that teaches the basics of foraging.",
       "type": "side",
       "area": "plains",
       "sub_area": "thicket",
