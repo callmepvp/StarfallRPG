@@ -130,7 +130,7 @@ class ScavengingCog(commands.Cog):
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
         if summary["skill_leveled"]:
-            embed.add_field(name="🏅 Level Up!", value=f"Your **Scavenging** is now **Level {summary['old_skill_level'] + 1}** \n🔋 +2 scavenging bonus!\n🎯 +2 evasion!", inline=False)
+            embed.add_field(name="🏅 Level Up!", value=f"Your **Scavenging** is now **Level {summary['old_skill_level'] + 1}** \n🔋 +2 Scavenging Bonus!\n🎯 +2 Evasion!", inline=False)
         if summary["collection_leveled"]:
             embed.add_field(name="📚 Collection Level!", value=f"Your **Herb Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 

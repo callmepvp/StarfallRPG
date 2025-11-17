@@ -285,7 +285,7 @@ class FishingCog(commands.Cog):
             if summary["skill_leveled"]:
                 embed.add_field(
                     name="🏅 Level Up!",
-                    value=f"You're now **Fishing Level {summary['old_skill_level'] + 1}**\n🔋 +2 fishing bonus!\n🎯 +2 accuracy!",
+                    value=f"You're now **Fishing Level {summary['old_skill_level'] + 1}**\n🔋 +2 Fishing Bonus!\n🎯 +2 Accuracy!",
                     inline=False
                 )
             if summary["collection_leveled"] and kind == "fish":

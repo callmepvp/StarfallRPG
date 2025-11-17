@@ -133,7 +133,7 @@ class MiningCog(commands.Cog):
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
         if summary["skill_leveled"]:
-            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Mining Level {summary['old_skill_level'] + 1}**\n🔋 +2 mining bonus!\n🛡️ +2 defense!", inline=False)
+            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Mining Level {summary['old_skill_level'] + 1}**\n🔋 +2 Mining Bonus!\n🛡️ +2 Defense!", inline=False)
         if summary["collection_leveled"]:
             embed.add_field(name="📚 Collection Level!", value=f"Your **Ore Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 

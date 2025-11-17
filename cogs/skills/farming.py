@@ -130,7 +130,7 @@ class FarmingCog(commands.Cog):
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
         if summary["skill_leveled"]:
-            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Farming Level {summary['old_skill_level'] + 1}**\n🔋 +5 farming bonus!", inline=False)
+            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Farming Level {summary['old_skill_level'] + 1}**\n🔋 +5 Farming Bonus!", inline=False)
         if summary["collection_leveled"]:
             embed.add_field(name="📚 Collection Milestone!", value=f"Your **Crop Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 
