@@ -1,13 +1,13 @@
 import datetime
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results
+from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results, get_skill_set_bonuses
 from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load full items catalog once at import time
@@ -66,11 +66,14 @@ class FarmingCog(commands.Cog):
             )
         
         if profile.get("stamina", 0) <= 0:
-            return await interaction.response.send_message("😴 You’re out of stamina! Rest or use a potion before farming again.", ephemeral=True)
+            return await interaction.response.send_message("😴 You're out of stamina! Rest or use a potion before farming again.", ephemeral=True)
 
         tool_inst, template = await get_equipped_tool(db, user_id, "farmingTool")
         if not tool_inst:
             return await interaction.response.send_message("❌ You must equip a farming tool first.", ephemeral=True)
+
+        # --- Get set bonuses for farming (applied silently in background) ---
+        set_bonuses = await get_skill_set_bonuses(db, user_id, "farming")
 
         # --- 2) Current location & available resources ---
         area_doc = await db.areas.find_one({"id": user_id})
@@ -88,7 +91,7 @@ class FarmingCog(commands.Cog):
             return await interaction.response.send_message("❌ Invalid subarea data!", ephemeral=True)
 
         if not has_skill_resources(subarea, _items_data, "farming"):
-            return await interaction.response.send_message("🌾 There’s nothing to farm in this subarea.", ephemeral=True)
+            return await interaction.response.send_message("🌾 There's nothing to farm in this subarea.", ephemeral=True)
 
         candidates = [(item_name, _items_data[item_name]) for item_name in subarea.get("resources", []) if item_name in _items_data and _items_data[item_name].get("type") == "farming"]
         if not candidates:
@@ -98,17 +101,17 @@ class FarmingCog(commands.Cog):
         picked_key = random.choices(keys, weights=weights, k=1)[0]
         item_info = _items_data[picked_key]
 
-        # --- 3) Determine quantity & XP with tool & skill bonuses ---
+        # --- 3) Determine quantity & XP with tool & skill bonuses & set bonuses ---
         base_qty = random.randint(1, 3)
         skill_doc = await db.skills.find_one({"id": user_id})
         farming_bonus = int(skill_doc.get("farmingBonus", 0)) if skill_doc else 0
 
-        final_qty, bonus_gained, float_qty = calculate_final_qty(base_qty, tool_inst, template, farming_bonus)
+        final_qty, bonus_gained, float_qty = calculate_final_qty(base_qty, tool_inst, template, farming_bonus, set_bonuses)
 
         xp_per_unit = int(item_info.get("xp", 1))
         essence_field = "farmingEssence"
 
-        # --- 4) Apply DB updates (inventory, stamina, xp, collections) ---
+        # --- 4) Apply DB updates (inventory, stamina, xp, collections) with set bonuses ---
         summary = await apply_gather_results(
             db=db,
             user_id=user_id,
@@ -118,7 +121,8 @@ class FarmingCog(commands.Cog):
             skill_prefix="farming",
             skill_bonus_inc=5,
             essence_field=essence_field,
-            collection_key="crop"
+            collection_key="crop",
+            set_bonuses=set_bonuses
         )
 
         # --- 5) Build embed ---
@@ -130,7 +134,7 @@ class FarmingCog(commands.Cog):
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
         if summary["skill_leveled"]:
-            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Farming Level {summary['old_skill_level'] + 1}**\n🔋 +5 Farming Bonus!", inline=False)
+            embed.add_field(name="🏅 Level Up!", value=f"You're now **Farming Level {summary['old_skill_level'] + 1}**\n🔋 +5 Farming Bonus!", inline=False)
         if summary["collection_leveled"]:
             embed.add_field(name="📚 Collection Milestone!", value=f"Your **Crop Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 

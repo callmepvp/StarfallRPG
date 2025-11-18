@@ -140,6 +140,21 @@
       "next_quests": []
     },
 
+    {
+      "quest_id": "web_of_danger",
+      "title": "Web of Danger",
+      "description": "The Alchemist in Emberveil is concerned about an increase in spider activity near her shop. She asks you to eliminate 8 Forest Spiders that have been causing trouble in the area.",
+      "type": "main",
+      "area": "plains",
+      "sub_area": "emberveil",
+      "objectives": [
+        { "type": "defeat", "target": "forest_spider", "amount": 10 }
+      ],
+      "rewards": { "gold": [20, 30], "items": [], "equipment": [] },
+      "prereqs": ["combat_intro_2"],
+      "next_quests": []
+    },
+
 
 
 
@@ -196,6 +211,24 @@
         { "type": "fetch", "target": "carrot", "amount": 10 }
       ],
       "rewards": { "gold": [10, 15], "items": [], "equipment": [] },
+      "prereqs": [],
+      "next_quests": [],
+      "npc_given": true
+    },
+
+    {
+      "quest_id": "scavenger_hoard",
+      "title": "The Scavenger's Hoard",
+      "description": "A nervous scavenger near the Well requests your help in gathering a few assorted small items he considers 'shinies'. He believes they hold special value.",
+      "type": "side",
+      "area": "plains",
+      "sub_area": "well",
+      "objectives": [
+        { "type": "fetch", "target": "seaweed", "amount": 1 },
+        { "type": "fetch", "target": "rubber duck", "amount": 2 },
+        { "type": "fetch", "target": "boot", "amount": 3 }
+      ],
+      "rewards": { "gold": [5, 15], "items": ["compost bundle"], "equipment": [] },
       "prereqs": [],
       "next_quests": [],
       "npc_given": true

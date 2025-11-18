@@ -1,13 +1,13 @@
 import datetime
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results
+from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results, get_skill_set_bonuses
 from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load items manifest & areas
@@ -65,11 +65,14 @@ class ScavengingCog(commands.Cog):
             )
 
         if profile.get("stamina", 0) <= 0:
-            return await interaction.response.send_message("😴 You’re out of stamina! Rest first.", ephemeral=True)
+            return await interaction.response.send_message("😴 You're out of stamina! Rest first.", ephemeral=True)
 
         tool_inst, template = await get_equipped_tool(db, user_id, "scavengingTool")
         if not tool_inst:
             return await interaction.response.send_message("❌ You must equip a scavenging tool first.", ephemeral=True)
+
+        # --- Get set bonuses for scavenging (applied silently in background) ---
+        set_bonuses = await get_skill_set_bonuses(db, user_id, "scavenging")
 
         # --- location & resources ---
         area_doc = await db.areas.find_one({"id": user_id})
@@ -87,7 +90,7 @@ class ScavengingCog(commands.Cog):
             return await interaction.response.send_message("❌ Invalid subarea data!", ephemeral=True)
 
         if not has_skill_resources(subarea, _items_data, "scavenging"):
-            return await interaction.response.send_message("🔍 There’s nothing to scavenge in this subarea.", ephemeral=True)
+            return await interaction.response.send_message("🔍 There's nothing to scavenge in this subarea.", ephemeral=True)
 
         candidates = [
             (item_name, _items_data[item_name])
@@ -101,14 +104,14 @@ class ScavengingCog(commands.Cog):
         picked_key = random.choices(keys, weights=weights, k=1)[0]
         item_info = _items_data[picked_key]
 
-        # --- quantity calc using helpers ---
+        # --- quantity calc using helpers with set bonuses ---
         base_qty = random.randint(1, 3)
         sk = await db.skills.find_one({"id": user_id})
         scav_bonus = int(sk.get("scavengingBonus", 0)) if sk else 0
 
-        final_qty, bonus_gained, _float_qty = calculate_final_qty(base_qty, tool_inst, template, scav_bonus)
+        final_qty, bonus_gained, _float_qty = calculate_final_qty(base_qty, tool_inst, template, scav_bonus, set_bonuses)
 
-        # apply DB updates via helper
+        # apply DB updates via helper with set bonuses
         summary = await apply_gather_results(
             db=db,
             user_id=user_id,
@@ -118,7 +121,8 @@ class ScavengingCog(commands.Cog):
             skill_prefix="scavenging",
             skill_bonus_inc=2,
             essence_field="scavengingEssence",
-            collection_key="herb"
+            collection_key="herb",
+            set_bonuses=set_bonuses
         )
 
         # --- embed ---

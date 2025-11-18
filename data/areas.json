@@ -31,7 +31,7 @@
         "image": "url_to_meadow_image",
         "mobs": ["plains_coyote", "mudback_boar"],
         "resources": ["oak", "silverleaf", "needlegrass", "stone", "coal"],
-        "connections": ["pond", "lynthaven", "emberveil", "shady_shack"]
+        "connections": ["pond", "lynthaven", "emberveil", "thicket"]
       },
       "thicket": {
         "name": "Thicket",
@@ -40,7 +40,7 @@
         "image": "url_to_thicket_image",
         "mobs": ["forest_spider", "wild_rabbit", "bear", "fox"],
         "resources": ["oak", "stone", "silverleaf", "needlegrass"],
-        "connections": ["pond"]
+        "connections": ["pond", "meadow"]
       },
       "well": {
         "name": "Well",
@@ -67,7 +67,7 @@
         "image": "url_to_shady_shack_image",
         "mobs": ["bandit"],
         "resources": [],
-        "connections": ["meadow", "lynthaven"]
+        "connections": ["lynthaven"]
       },
       "emberveil": {
         "name": "Emberveil",

@@ -8,7 +8,7 @@ import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results
+from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results, get_skill_set_bonuses
 from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load the global items manifest
@@ -83,6 +83,9 @@ class FishingCog(commands.Cog):
                 "❌ You must equip a fishing tool first.",
                 ephemeral=True
             )
+
+        # --- Get set bonuses for fishing (applied silently in background) ---
+        set_bonuses = await get_skill_set_bonuses(db, user_id, "fishing")
 
         # 2) Fetch current subarea
         area_doc = await db.areas.find_one({"id": user_id})
@@ -201,10 +204,10 @@ class FishingCog(commands.Cog):
                 base_qty = random.randint(1, 2)
                 xp_per_unit = info.get("xp", 1)
 
-        # 7) Apply tool and skill bonuses to quantity for fish/trash
+        # 7) Apply tool and skill bonuses to quantity for fish/trash (with set bonuses)
         bonus_gained = False
         if kind in ["fish", "trash"]:
-            final_qty, bonus_gained, float_qty = calculate_final_qty(base_qty, tool_inst, template, fishing_bonus)
+            final_qty, bonus_gained, float_qty = calculate_final_qty(base_qty, tool_inst, template, fishing_bonus, set_bonuses)
         else:
             final_qty = base_qty  # coins/crates already had multipliers applied
 
@@ -216,7 +219,7 @@ class FishingCog(commands.Cog):
         )
 
         if kind == "coins":
-            # Handle coins separately
+            # Handle coins separately with set bonuses
             await db.general.update_one({"id": user_id}, {
                 "$inc": {
                     "stamina": -1,
@@ -224,9 +227,11 @@ class FishingCog(commands.Cog):
                 }
             })
             
-            # Update skill and essence manually for coins
-            xp_gain = xp_per_unit * final_qty
-            essence_gain = round(xp_gain * 0.35, 2)
+            # Update skill and essence manually for coins with set bonuses
+            base_xp_gain = xp_per_unit * final_qty
+            xp_gain = int(base_xp_gain * (1 + set_bonuses["xp_multiplier"]))
+            base_essence_gain = round(base_xp_gain * 0.35, 2)
+            essence_gain = round(base_essence_gain * (1 + set_bonuses["essence_multiplier"]), 2)
             
             skill_summary = await self._update_fishing_skill(db, user_id, xp_gain, essence_gain)
             
@@ -235,15 +240,17 @@ class FishingCog(commands.Cog):
             embed.add_field(name="Fishing Essence", value=f"✨ {essence_gain}", inline=True)
 
         elif kind == "crate":
-            # Handle crate separately
+            # Handle crate separately with set bonuses
             await db.general.update_one({"id": user_id}, {
                 "$inc": {"stamina": -1},
                 "$inc": {f"crates.{self._crate_rarities.index(key)}": final_qty}
             })
             
-            # Update skill and essence manually for crate
-            xp_gain = xp_per_unit * final_qty
-            essence_gain = round(xp_gain * 0.35, 2)
+            # Update skill and essence manually for crate with set bonuses
+            base_xp_gain = xp_per_unit * final_qty
+            xp_gain = int(base_xp_gain * (1 + set_bonuses["xp_multiplier"]))
+            base_essence_gain = round(base_xp_gain * 0.35, 2)
+            essence_gain = round(base_essence_gain * (1 + set_bonuses["essence_multiplier"]), 2)
             
             skill_summary = await self._update_fishing_skill(db, user_id, xp_gain, essence_gain)
             
@@ -252,7 +259,7 @@ class FishingCog(commands.Cog):
             embed.add_field(name="Fishing Essence", value=f"✨ {essence_gain}", inline=True)
 
         else:
-            # Use apply_gather_results for fish/trash
+            # Use apply_gather_results for fish/trash with set bonuses
             collection_key = "fish" if kind == "fish" else None
             
             summary = await apply_gather_results(
@@ -264,7 +271,8 @@ class FishingCog(commands.Cog):
                 skill_prefix="fishing",
                 skill_bonus_inc=2,
                 essence_field="fishingEssence",
-                collection_key=collection_key
+                collection_key=collection_key,
+                set_bonuses=set_bonuses
             )
 
             # Also update accuracy for fishing level ups

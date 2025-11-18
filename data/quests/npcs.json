@@ -503,5 +503,69 @@
         "options": []
       }
     }
+  },
+
+  "collector": {
+    "name": "The Collector",
+    "sub_area": "well",
+    "dialogue": {
+      "start": {
+        "text": "'Oh! A visitor! You're not a frog. Good. Frogs don't bring me shinies. Do *you* have shinies?'",
+        "lore": "A jittery creature of a man who lurks beside the moss-dark stones of the Old Well. Nobody knows his origin - some swear he crawled out of the well itself. He obsessively hoards small items and insists they whisper to him.",
+        "options": [
+          { "label": "Who are you?", "next": "who" },
+          { "label": "What are 'shinies'?", "next": "shinies" },
+          { "label": "Got any work for me?", "next": "quest_offer" },
+          { "label": "Goodbye", "next": "end" }
+        ]
+      },
+
+      "who": {
+        "text": "'Me? I'm The Collector! I collect things. All things. Especially the ones people drop, lose, or the ones that whisper secrets to me when the moon is fat.'",
+        "lore": "He blinks rapidly—too rapidly.",
+        "options": [
+          { "label": "...Right.", "next": "start" }
+        ]
+      },
+
+      "shinies": {
+        "text": "'Shinies! Trinkets! Bits! Objects of unimaginable importance! Some fools call it junk—*they are wrong.* Shinies choose their owner.'",
+        "lore": "He clutches a handful of mismatched objects protectively.",
+        "options": [
+          { "label": "If you say so.", "next": "start" }
+        ]
+      },
+
+      "quest_offer": {
+        "text": "'Work? Oh yes, yes, yes! The frogs, the *thieving frogs*, they stole my shinies. Bring them back before they trade them to the worms.'",
+        "lore": "His eyes widen with manic urgency.",
+        "options": [
+          {
+            "label": "Sure, I'll help.",
+            "next": "quest_accept",
+            "action": "give_quest",
+            "quest_id": "scavenger_hoard"
+          },
+          {
+            "label": "Maybe later.",
+            "next": "start"
+          }
+        ]
+      },
+
+      "quest_accept": {
+        "text": "'Splendid! The frogs will rue the day they grew legs! Well… more legs than usual.'",
+        "lore": "He claps his hands excitedly.",
+        "options": [
+          { "label": "I'll return soon.", "next": "end" }
+        ]
+      },
+
+      "end": {
+        "text": "Farewell, non-frog friend! And don’t fall into the well! It bites!",
+        "options": []
+      }
+    }
   }
+
 }

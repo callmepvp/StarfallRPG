@@ -1,13 +1,13 @@
 import datetime
 import random
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict
 
 import discord
 from discord import app_commands
 from discord.ext import commands
 
-from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results
+from server.skillMethods import get_equipped_tool, calculate_final_qty, apply_gather_results, get_skill_set_bonuses
 from server.userMethods import regenerate_stamina, calculate_power_rating, has_skill_resources
 
 # Load items manifest
@@ -68,13 +68,16 @@ class MiningCog(commands.Cog):
             )
         
         if profile.get("stamina", 0) <= 0:
-            return await interaction.response.send_message("😴 You’re out of stamina! Rest before mining.", ephemeral=True)
+            return await interaction.response.send_message("😴 You're out of stamina! Rest before mining.", ephemeral=True)
 
         tool_inst, template = await get_equipped_tool(db, user_id, "miningTool")
         if not tool_inst:
             return await interaction.response.send_message("❌ You must equip a mining tool first.", ephemeral=True)
 
-        # 2) location & resources
+        # 2) Get set bonuses for mining (applied silently in background)
+        set_bonuses = await get_skill_set_bonuses(db, user_id, "mining")
+
+        # 3) location & resources
         area_doc = await db.areas.find_one({"id": user_id})
         if not area_doc:
             return await interaction.response.send_message("❌ Couldn't determine your current location!", ephemeral=True)
@@ -90,7 +93,7 @@ class MiningCog(commands.Cog):
             return await interaction.response.send_message("❌ Invalid subarea data!", ephemeral=True)
 
         if not has_skill_resources(subarea, _items_data, "mining"):
-            return await interaction.response.send_message("⛏️ There’s nothing to mine in this subarea.", ephemeral=True)
+            return await interaction.response.send_message("⛏️ There's nothing to mine in this subarea.", ephemeral=True)
 
         candidates = [
             (item_name, _items_data[item_name])
@@ -104,14 +107,14 @@ class MiningCog(commands.Cog):
         picked_key = random.choices(keys, weights=weights, k=1)[0]
         item_info = _items_data[picked_key]
 
-        # --- compute final qty using helper ---
+        # --- compute final qty using helper with set bonuses ---
         base_qty = random.randint(1, 3)
         sk = await db.skills.find_one({"id": user_id})
         mining_bonus = int(sk.get("miningBonus", 0)) if sk else 0
 
-        final_qty, bonus_gained, _float_qty = calculate_final_qty(base_qty, tool_inst, template, mining_bonus)
+        final_qty, bonus_gained, _float_qty = calculate_final_qty(base_qty, tool_inst, template, mining_bonus, set_bonuses)
 
-        # apply DB updates via helper
+        # apply DB updates via helper with set bonuses
         summary = await apply_gather_results(
             db=db,
             user_id=user_id,
@@ -121,10 +124,11 @@ class MiningCog(commands.Cog):
             skill_prefix="mining",
             skill_bonus_inc=2,
             essence_field="miningEssence",
-            collection_key="ore"
+            collection_key="ore",
+            set_bonuses=set_bonuses
         )
 
-        # --- embed ---
+        # --- embed (back to original format) ---
         embed = discord.Embed(title="⛏️ Mining Results", color=discord.Color.blue(), timestamp=datetime.datetime.now())
         embed.add_field(name="Ores Mined", value=f"You extracted **{final_qty}** × **{item_info['name'].title()}**", inline=False)
         embed.add_field(name="Mining XP", value=f"⭐ {summary['xp_gain']:,} XP", inline=True)
@@ -133,7 +137,7 @@ class MiningCog(commands.Cog):
         if bonus_gained:
             embed.add_field(name="🎉 Bonus!", value="Your tool's extra-roll granted **+1** additional item!", inline=False)
         if summary["skill_leveled"]:
-            embed.add_field(name="🏅 Level Up!", value=f"You’re now **Mining Level {summary['old_skill_level'] + 1}**\n🔋 +2 Mining Bonus!\n🛡️ +2 Defense!", inline=False)
+            embed.add_field(name="🏅 Level Up!", value=f"You're now **Mining Level {summary['old_skill_level'] + 1}**\n🔋 +2 Mining Bonus!\n🛡️ +2 Defense!", inline=False)
         if summary["collection_leveled"]:
             embed.add_field(name="📚 Collection Level!", value=f"Your **Ore Collection** is now **Level {summary['old_collection_level'] + 1}**", inline=False)
 

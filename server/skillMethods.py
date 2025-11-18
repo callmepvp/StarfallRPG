@@ -13,6 +13,63 @@ if _ITEM_TEMPLATES_PATH.exists():
     with _ITEM_TEMPLATES_PATH.open(encoding="utf-8") as fh:
         _item_templates = json.load(fh)
 
+# Load set bonuses
+_SET_BONUSES_PATH = Path("data/setBonuses.json")
+_set_bonuses_config: Dict[str, Any] = {}
+if _SET_BONUSES_PATH.exists():
+    with _SET_BONUSES_PATH.open(encoding="utf-8") as fh:
+        _set_bonuses_config = json.load(fh)
+
+
+async def get_skill_set_bonuses(db, user_id: int, skill_name: str) -> Dict[str, float]:
+    """
+    Calculate skill-related set bonuses for a specific skill.
+    Returns a dict with multipliers and bonuses for the given skill.
+    """
+    equip_doc = await db.equipment.find_one({"id": user_id}) or {}
+    
+    skill_bonuses = {
+        "yield_multiplier": 0.0,
+        "xp_multiplier": 0.0,
+        "essence_multiplier": 0.0,
+        "skill_bonus": 0
+    }
+    
+    # Count set pieces
+    armor_slots = ["head", "chest", "legs", "feet", "gloves"]
+    set_counts = {}
+    for slot in armor_slots:
+        instance_id = equip_doc.get(slot)
+        if instance_id:
+            instance = next((inst for inst in equip_doc.get("instances", []) 
+                        if inst.get("instance_id") == instance_id), None)
+            if instance and instance.get("set"):
+                set_name = instance["set"]
+                set_counts[set_name] = set_counts.get(set_name, 0) + 1
+    
+    # Apply set bonuses
+    for set_name, count in set_counts.items():
+        set_config = _set_bonuses_config.get(set_name, {})
+        for threshold in ["2", "4", "5"]:
+            if count >= int(threshold) and threshold in set_config:
+                threshold_bonuses = set_config[threshold]
+                
+                # Look for skill-specific bonuses (e.g., mining_yield_multiplier)
+                for bonus_key, value in threshold_bonuses.items():
+                    if bonus_key.startswith(skill_name + "_"):
+                        bonus_type = bonus_key.replace(skill_name + "_", "")
+                        
+                        if bonus_type == "yield_multiplier":
+                            skill_bonuses["yield_multiplier"] += value
+                        elif bonus_type == "xp_multiplier":
+                            skill_bonuses["xp_multiplier"] += value
+                        elif bonus_type == "essence_multiplier":
+                            skill_bonuses["essence_multiplier"] += value
+                        elif bonus_type == "bonus":
+                            skill_bonuses["skill_bonus"] += int(value)
+    
+    return skill_bonuses
+
 
 def stats_get(source: Optional[Dict[str, Any]], key: str, default):
     """
@@ -58,16 +115,9 @@ async def get_equipped_tool(db, user_id: int, slot: str) -> Tuple[Optional[Dict[
     return tool_inst, tmpl
 
 
-def calculate_final_qty(base_qty: int, tool_inst: Optional[Dict[str, Any]], template: Optional[Dict[str, Any]], skill_bonus: int) -> Tuple[int, bool, float]:
+def calculate_final_qty(base_qty: int, tool_inst: Optional[Dict[str, Any]], template: Optional[Dict[str, Any]], skill_bonus: int, set_bonuses: Dict[str, float]) -> Tuple[int, bool, float]:
     """
-    Compute final gathered integer quantity.
-
-    - base_qty (int)
-    - tool_inst: instance dict (may be None)
-    - template: template dict (may be None)
-    - skill_bonus: integer bonus (from skill doc) -> applied as 2% per bonus point (same as your existing logic)
-
-    Returns (final_qty, bonus_gained_bool, float_qty_for_debugging)
+    Compute final gathered integer quantity with set bonuses.
     """
     # read multipliers (prefer instance then template then defaults)
     tool_yield = stats_get(tool_inst, "yield_multiplier",
@@ -75,15 +125,19 @@ def calculate_final_qty(base_qty: int, tool_inst: Optional[Dict[str, Any]], temp
     tool_extra = stats_get(tool_inst, "extra_roll_chance",
                    stats_get(template, "extra_roll_chance", 0.0))
 
-    skill_mult = 1.0 + (skill_bonus * 0.02)
+    # Apply set bonuses to skill bonus and multipliers
+    effective_skill_bonus = skill_bonus + set_bonuses["skill_bonus"]
+    effective_yield_multiplier = tool_yield * (1 + set_bonuses["yield_multiplier"])
+    
+    skill_mult = 1.0 + (effective_skill_bonus * 0.02)
 
-    float_qty = base_qty * tool_yield * skill_mult
+    float_qty = base_qty * effective_yield_multiplier * skill_mult
     integer_qty = math.floor(float_qty)
     if random.random() < (float_qty - integer_qty):
         integer_qty += 1
 
     bonus_gained = False
-    extra_chance = tool_extra + skill_bonus * 0.005
+    extra_chance = tool_extra + effective_skill_bonus * 0.005
     if random.random() < extra_chance:
         integer_qty += 1
         bonus_gained = True
@@ -101,36 +155,26 @@ async def apply_gather_results(
     skill_prefix: str,
     skill_bonus_inc: int,
     essence_field: str,
-    collection_key: str
+    collection_key: str,
+    set_bonuses: Dict[str, float] = None
 ) -> Dict[str, Any]:
     """
     Apply DB updates for a gather action and handle skill & collection levelups.
-
-    - xp_per_unit: XP gained per unit (from item manifest)
-    - skill_prefix: e.g. "farming" -> fields: farmingXP, farmingLevel, farmingBonus
-    - skill_bonus_inc: how many 'bonus' points to increment on skill level up (your existing values)
-    - essence_field: e.g. "farmingEssence"
-    - collection_key: e.g. "crop" (collection document stores: { collection_key, collection_key + 'Level' })
-
-    Returns summary dict:
-    {
-      "xp_gain": int,
-      "skill_leveled": bool,
-      "old_skill_level": int,
-      "new_skill_level": int or None,
-      "collection_leveled": bool,
-      "old_collection_level": int,
-      "new_collection_level": int or None
-    }
+    Now includes set bonus multipliers for XP and essence.
     """
+    if set_bonuses is None:
+        set_bonuses = {"xp_multiplier": 0.0, "essence_multiplier": 0.0}
+    
     # 1) inventory
     await db.inventory.update_one({"id": user_id}, {"$inc": {picked_key: final_qty}})
 
     # 2) stamina
     await db.general.update_one({"id": user_id}, {"$inc": {"stamina": -1}})
 
-    # 3) XP
-    xp_gain = xp_per_unit * final_qty
+    # 3) XP with set bonus multiplier
+    base_xp_gain = xp_per_unit * final_qty
+    xp_gain = int(base_xp_gain * (1 + set_bonuses["xp_multiplier"]))
+    
     skill_doc = await db.skills.find_one({"id": user_id})
     # defensive fetch
     old_xp = int(skill_doc.get(f"{skill_prefix}XP", 0))
@@ -173,8 +217,10 @@ async def apply_gather_results(
     else:
         await db.skills.update_one({"id": user_id}, {"$set": {f"{skill_prefix}XP": new_xp}})
 
-    # 4) essence (in general doc)
-    await db.general.update_one({"id": user_id}, {"$inc": {essence_field: round(xp_gain * 0.35, 2)}})
+    # 4) essence with set bonus multiplier
+    base_essence_gain = round(base_xp_gain * 0.35, 2)
+    essence_gain = round(base_essence_gain * (1 + set_bonuses["essence_multiplier"]), 2)
+    await db.general.update_one({"id": user_id}, {"$inc": {essence_field: essence_gain}})
 
     # 5) collection
     coll = await db.collections.find_one({"id": user_id})
@@ -204,6 +250,7 @@ async def apply_gather_results(
 
     return {
         "xp_gain": xp_gain,
+        "essence_gain": essence_gain,
         "skill_leveled": skill_leveled,
         "old_skill_level": old_lvl,
         "new_skill_level": new_level,
